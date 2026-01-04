@@ -121,7 +121,62 @@ Add to your MCP client configuration:
 }
 ```
 
-## Deployment on Raspberry Pi 5
+## Docker Deployment (Recommended)
+
+The easiest way to run the inventory system with Tailscale access.
+
+### Quick Start with Docker Compose
+
+1. **Get a Tailscale auth key** from [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
+   - Create a reusable, ephemeral key
+
+2. **Create environment file:**
+   ```bash
+   cp .env.docker.example .env
+   # Edit .env and add your TS_AUTHKEY
+   ```
+
+3. **Run with Docker Compose:**
+   ```bash
+   docker compose up -d
+   ```
+
+4. **Access your inventory:**
+   - Local: http://localhost:3000
+   - Tailscale: https://homelab-inventory.your-tailnet.ts.net
+
+### Docker Run (Alternative)
+
+```bash
+docker build -t homelab-inventory .
+
+docker run -d \
+  --name homelab-inventory \
+  --cap-add NET_ADMIN \
+  --cap-add SYS_MODULE \
+  --device /dev/net/tun:/dev/net/tun \
+  -e TS_AUTHKEY=tskey-auth-xxxxx \
+  -e TS_HOSTNAME=homelab-inventory \
+  -v inventory-data:/app/data \
+  -v tailscale-state:/var/lib/tailscale \
+  -p 3000:3000 \
+  homelab-inventory
+```
+
+### Persistent Storage
+
+The container uses two volumes:
+- `inventory-data` - SQLite database and uploaded images
+- `tailscale-state` - Tailscale authentication state
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TS_AUTHKEY` | Tailscale auth key (required for Tailscale) | - |
+| `TS_HOSTNAME` | Hostname on your Tailnet | `homelab-inventory` |
+
+## Deployment on Raspberry Pi 5 (Without Docker)
 
 ### Automated Setup
 
@@ -137,7 +192,7 @@ sudo ./deploy/setup.sh
 4. Configure Nginx with `deploy/nginx.conf`
 5. Start with PM2: `pm2 start deploy/ecosystem.config.js`
 
-### Tailscale HTTPS
+### Tailscale HTTPS (Non-Docker)
 
 1. Enable Tailscale: `tailscale up`
 2. Get certificate: `tailscale cert inventory`

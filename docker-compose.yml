@@ -1,0 +1,46 @@
+services:
+  homelab-inventory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: homelab-inventory
+    restart: unless-stopped
+
+    # Required for Tailscale to work
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+
+    environment:
+      # Tailscale auth key - generate at https://login.tailscale.com/admin/settings/keys
+      # Use a reusable, ephemeral key for containers
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      # Optional: Custom hostname on your Tailnet
+      - TS_HOSTNAME=${TS_HOSTNAME:-homelab-inventory}
+      # Node environment
+      - NODE_ENV=production
+
+    volumes:
+      # Persist the database and images
+      - inventory-data:/app/data
+      # Persist Tailscale state (so it doesn't re-auth on restart)
+      - tailscale-state:/var/lib/tailscale
+
+    # Optional: Also expose locally (not needed if using Tailscale only)
+    ports:
+      - "3000:3000"
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  inventory-data:
+    driver: local
+  tailscale-state:
+    driver: local

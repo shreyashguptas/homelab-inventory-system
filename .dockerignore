@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+mcp-server/node_modules
+
+# Build output
+.next
+mcp-server/dist
+
+# Data (will be mounted as volume)
+data
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files (will be passed as env vars)
+.env
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage
+
+# Deploy scripts (not needed in container)
+deploy
+
+# Misc
+*.log
+npm-debug.log*
