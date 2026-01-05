@@ -5,6 +5,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Lab Inventory',
   description: 'Home lab inventory management system',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
