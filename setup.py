@@ -46,6 +46,15 @@ ENV_VARIABLES = [
                 "         Must be DNS-compatible (lowercase, no spaces).",
         "sanitize": "hostname"
     },
+    {
+        "name": "GROQ_API_KEY",
+        "description": "Groq API key for AI-assisted features",
+        "required": False,
+        "sensitive": True,
+        "help": "Get from: https://console.groq.com/keys\n"
+                "         Used for voice-to-text and AI form extraction.\n"
+                "         Leave empty to disable AI features."
+    },
 ]
 
 

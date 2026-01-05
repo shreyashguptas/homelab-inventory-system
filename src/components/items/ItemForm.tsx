@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Combobox } from '@/components/ui';
 import type { ComboboxOption } from '@/components/ui';
 import { ImageUploader } from '@/components/images/ImageUploader';
+import { TempImageUploader } from '@/components/images/TempImageUploader';
+import { VoiceAssistModal } from '@/components/voice/VoiceAssistModal';
 import { SpecificationsEditor } from './SpecificationsEditor';
 import { TagsInput } from './TagsInput';
 import { UNITS } from '@/lib/constants/units';
 import type { ItemWithRelations, Category, Vendor, TrackingMode, ItemCondition } from '@/lib/types/database';
+import type { TempImage, ExtractedFormData } from '@/lib/types/ai';
 
 interface ItemFormProps {
   item?: ItemWithRelations;
@@ -39,6 +42,13 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
   const [quantity, setQuantity] = useState(item?.quantity?.toString() || '0');
   const [minQuantity, setMinQuantity] = useState(item?.min_quantity?.toString() || '0');
   const [purchasePrice, setPurchasePrice] = useState(item?.purchase_price?.toString() || '');
+
+  // Voice assist state
+  const [showVoiceAssist, setShowVoiceAssist] = useState(false);
+  const [pendingImages, setPendingImages] = useState<TempImage[]>([]);
+
+  // Form refs for setting values programmatically
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Validate and sanitize numeric input (allows decimals)
   const handleNumericInput = (
@@ -106,6 +116,82 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
     }
   };
 
+  // Apply AI-extracted data to form fields
+  const applyAIData = async (data: ExtractedFormData, images: TempImage[]) => {
+    // Set pending images
+    setPendingImages(images);
+
+    // Set tracking mode first (affects which fields are visible)
+    if (data.tracking_mode) {
+      setTrackingMode(data.tracking_mode);
+    }
+
+    // Set state-controlled fields
+    if (data.specifications) {
+      setSpecifications(data.specifications);
+    }
+    if (data.tags) {
+      setTags(data.tags);
+    }
+    if (data.quantity !== undefined) {
+      setQuantity(data.quantity.toString());
+    }
+    if (data.min_quantity !== undefined) {
+      setMinQuantity(data.min_quantity.toString());
+    }
+    if (data.purchase_price !== undefined) {
+      setPurchasePrice(data.purchase_price.toString());
+    }
+
+    // Handle category - either use existing ID or create new
+    if (data.category_id) {
+      setSelectedCategoryId(data.category_id);
+    } else if (data.category_name_suggestion) {
+      const newCategory = await handleCreateCategory(data.category_name_suggestion);
+      if (newCategory) {
+        setSelectedCategoryId(newCategory.value);
+      }
+    }
+
+    // Handle vendor - either use existing ID or create new
+    if (data.vendor_id) {
+      setSelectedVendorId(data.vendor_id);
+    } else if (data.vendor_name_suggestion) {
+      const newVendor = await handleCreateVendor(data.vendor_name_suggestion);
+      if (newVendor) {
+        setSelectedVendorId(newVendor.value);
+      }
+    }
+
+    // Set form input values directly using the form ref
+    if (formRef.current) {
+      const setInputValue = (name: string, value: string | undefined) => {
+        if (value === undefined) return;
+        const input = formRef.current?.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        if (input) {
+          input.value = value;
+        }
+      };
+
+      setInputValue('name', data.name);
+      setInputValue('description', data.description);
+      setInputValue('location', data.location);
+      setInputValue('notes', data.notes);
+      setInputValue('purchase_url', data.purchase_url);
+      setInputValue('datasheet_url', data.datasheet_url);
+      setInputValue('unit', data.unit);
+      setInputValue('serial_number', data.serial_number);
+      setInputValue('asset_tag', data.asset_tag);
+      setInputValue('condition', data.condition);
+      setInputValue('purchase_date', data.purchase_date);
+      setInputValue('warranty_expiry', data.warranty_expiry);
+      setInputValue('purchase_currency', data.purchase_currency);
+    }
+
+    // Close the modal
+    setShowVoiceAssist(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -153,6 +239,33 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
       }
 
       const savedItem = await res.json();
+
+      // Upload pending images if any (for new items)
+      if (!item && pendingImages.length > 0) {
+        for (let i = 0; i < pendingImages.length; i++) {
+          const img = pendingImages[i];
+          const imageForm = new FormData();
+          imageForm.append('file', img.file);
+          imageForm.append('item_id', savedItem.id);
+          if (img.isPrimary) {
+            imageForm.append('is_primary', 'true');
+          }
+
+          try {
+            await fetch('/api/images', {
+              method: 'POST',
+              body: imageForm,
+            });
+          } catch (imgErr) {
+            console.error('Failed to upload image:', imgErr);
+          }
+        }
+
+        // Cleanup blob URLs
+        pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+        setPendingImages([]);
+      }
+
       router.push(`/items/${savedItem.id}`);
       router.refresh();
     } catch (err) {
@@ -163,15 +276,45 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
-          {error}
-        </div>
-      )}
+    <>
+      <VoiceAssistModal
+        isOpen={showVoiceAssist}
+        onClose={() => setShowVoiceAssist(false)}
+        onComplete={applyAIData}
+        categories={categories}
+        vendors={vendors}
+      />
 
-      {/* Basic Information */}
-      <Card>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Voice Assist Button - only show for new items */}
+        {!item && (
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              onClick={() => setShowVoiceAssist(true)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
+              </svg>
+              Add using microphone
+            </Button>
+          </div>
+        )}
+
+        {/* Basic Information */}
+        <Card>
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
@@ -445,7 +588,7 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
         </CardContent>
       </Card>
 
-      {/* Images (only show for existing items) */}
+      {/* Images for existing items */}
       {item && (
         <Card>
           <CardHeader>
@@ -453,6 +596,25 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
           </CardHeader>
           <CardContent>
             <ImageUploader itemId={item.id} existingImages={item.images} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pending Images for new items (from voice assist) */}
+      {!item && pendingImages.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Images ({pendingImages.length}/3)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TempImageUploader
+              images={pendingImages}
+              onImagesChange={setPendingImages}
+              maxImages={3}
+            />
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              These images will be uploaded when you create the item.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -466,6 +628,7 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
           Cancel
         </Button>
       </div>
-    </form>
+      </form>
+    </>
   );
 }
