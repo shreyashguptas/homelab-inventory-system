@@ -182,17 +182,16 @@ export function TempImageUploader({
 
       {/* Upload zone */}
       {canAddMore && (
-        <div
+        <label
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => !disabled && fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors cursor-pointer ${
+          className={`block border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors ${
             disabled
               ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 cursor-not-allowed'
               : dragOver
-              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 active:border-primary-400'
+              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 cursor-pointer'
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 active:border-primary-400 cursor-pointer'
           }`}
         >
           <input
@@ -202,11 +201,11 @@ export function TempImageUploader({
             multiple
             disabled={disabled}
             onChange={(e) => handleFiles(e.target.files)}
-            className="hidden"
+            className="sr-only"
           />
 
           <svg
-            className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-gray-400"
+            className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-gray-400 pointer-events-none"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -220,22 +219,21 @@ export function TempImageUploader({
           </svg>
 
           {disabled ? (
-            <p className="mt-2 text-xs sm:text-sm text-gray-500">Upload disabled</p>
+            <p className="mt-2 text-xs sm:text-sm text-gray-500 pointer-events-none">Upload disabled</p>
           ) : (
             <>
-              <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 pointer-events-none">
                 <span className="sm:hidden">Tap to add images</span>
                 <span className="hidden sm:inline">
-                  Drag and drop or{' '}
-                  <span className="text-primary-600 dark:text-primary-400">browse</span>
+                  Drag and drop or <span className="text-primary-600 dark:text-primary-400">browse</span>
                 </span>
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 pointer-events-none">
                 {images.length}/{maxImages} · PNG, JPG, WebP · Max 10MB
               </p>
             </>
           )}
-        </div>
+        </label>
       )}
     </div>
   );
