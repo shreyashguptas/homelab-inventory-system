@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { itemsRepository } from '@/lib/repositories/items';
 import { categoriesRepository } from '@/lib/repositories/categories';
-import { Card, Badge, Button } from '@/components/ui';
+import { Card, Button } from '@/components/ui';
 import { ItemFilters } from '@/components/items/ItemFilters';
-import { ItemCard } from '@/components/items/ItemCard';
+import { InventoryGrid } from '@/components/items/InventoryGrid';
 import type { TrackingMode } from '@/lib/types/database';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   searchParams: Promise<{
@@ -100,11 +103,7 @@ export default async function ItemsPage({ searchParams }: PageProps) {
           </div>
         </Card>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
-        </div>
+        <InventoryGrid items={items} />
       )}
 
       {/* Pagination */}

@@ -18,3 +18,6 @@ export type { SpinnerProps } from './Spinner';
 
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
+
+export { Combobox } from './Combobox';
+export type { ComboboxProps, ComboboxOption } from './Combobox';

@@ -2,14 +2,17 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Card, Badge, Button } from '@/components/ui';
+import { Card, Badge } from '@/components/ui';
 import type { Item } from '@/lib/types/database';
 
 interface ItemCardProps {
   item: Item;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectionChange?: (id: string, selected: boolean) => void;
 }
 
-export function ItemCard({ item }: ItemCardProps) {
+export function ItemCard({ item, selectable = false, selected = false, onSelectionChange }: ItemCardProps) {
   const [quantity, setQuantity] = useState(item.quantity);
   const [updating, setUpdating] = useState(false);
 
@@ -40,10 +43,27 @@ export function ItemCard({ item }: ItemCardProps) {
     }
   };
 
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    onSelectionChange?.(item.id, e.target.checked);
+  };
+
   return (
-    <Card hover className="flex flex-col">
+    <Card hover className={`flex flex-col relative ${selected ? 'ring-2 ring-primary-500' : ''}`}>
+      {selectable && (
+        <div className="absolute top-3 left-3 z-10">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={handleCheckboxChange}
+            onClick={(e) => e.stopPropagation()}
+            className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500
+                       dark:border-gray-600 dark:bg-gray-800 cursor-pointer"
+          />
+        </div>
+      )}
       <Link href={`/items/${item.id}`} className="flex-1">
-        <div className="p-4">
+        <div className={`p-4 ${selectable ? 'pl-10' : ''}`}>
           {/* Header */}
           <div className="flex items-start justify-between gap-2 mb-3">
             <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2">

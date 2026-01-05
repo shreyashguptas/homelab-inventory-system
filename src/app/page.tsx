@@ -14,7 +14,14 @@ async function getStats() {
       SUM(CASE WHEN tracking_mode = 'quantity' THEN quantity ELSE 1 END) as total_units,
       COUNT(DISTINCT category_id) as categories_used,
       COUNT(DISTINCT location) as unique_locations,
-      SUM(CASE WHEN tracking_mode = 'quantity' AND quantity <= min_quantity AND min_quantity > 0 THEN 1 ELSE 0 END) as low_stock_items
+      SUM(CASE WHEN tracking_mode = 'quantity' AND quantity <= min_quantity AND min_quantity > 0 THEN 1 ELSE 0 END) as low_stock_items,
+      SUM(
+        CASE
+          WHEN purchase_price IS NOT NULL THEN
+            CASE WHEN tracking_mode = 'quantity' THEN quantity * purchase_price ELSE purchase_price END
+          ELSE 0
+        END
+      ) as total_value
     FROM items
   `).get() as {
     total_items: number;
@@ -22,6 +29,7 @@ async function getStats() {
     categories_used: number;
     unique_locations: number;
     low_stock_items: number;
+    total_value: number;
   };
 
   const recentItems = db.prepare(`
@@ -59,10 +67,20 @@ async function getStats() {
 export default async function DashboardPage() {
   const { stats, recentItems, lowStockItems } = await getStats();
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
   const statCards = [
     {
       label: 'Total Items',
       value: stats.total_items || 0,
+      displayValue: (stats.total_items || 0).toLocaleString(),
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -73,6 +91,7 @@ export default async function DashboardPage() {
     {
       label: 'Total Units',
       value: stats.total_units || 0,
+      displayValue: (stats.total_units || 0).toLocaleString(),
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -81,8 +100,20 @@ export default async function DashboardPage() {
       color: 'text-green-600 bg-green-50 dark:bg-green-900/20',
     },
     {
+      label: 'Total Value',
+      value: stats.total_value || 0,
+      displayValue: formatCurrency(stats.total_value || 0),
+      icon: (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
+    },
+    {
       label: 'Locations',
       value: stats.unique_locations || 0,
+      displayValue: (stats.unique_locations || 0).toLocaleString(),
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -94,6 +125,7 @@ export default async function DashboardPage() {
     {
       label: 'Low Stock',
       value: stats.low_stock_items || 0,
+      displayValue: (stats.low_stock_items || 0).toLocaleString(),
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -114,14 +146,14 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map((stat) => (
           <Card key={stat.label} padding="md">
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-lg ${stat.color}`}>{stat.icon}</div>
               <div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {stat.value.toLocaleString()}
+                  {stat.displayValue}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</div>
               </div>

@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
+import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Combobox } from '@/components/ui';
+import type { ComboboxOption } from '@/components/ui';
 import { ImageUploader } from '@/components/images/ImageUploader';
 import { SpecificationsEditor } from './SpecificationsEditor';
 import { TagsInput } from './TagsInput';
+import { UNITS } from '@/lib/constants/units';
 import type { ItemWithRelations, Category, Vendor, TrackingMode, ItemCondition } from '@/lib/types/database';
 
 interface ItemFormProps {
@@ -14,7 +16,7 @@ interface ItemFormProps {
   vendors: Vendor[];
 }
 
-export function ItemForm({ item, categories, vendors }: ItemFormProps) {
+export function ItemForm({ item, categories: initialCategories, vendors: initialVendors }: ItemFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +28,83 @@ export function ItemForm({ item, categories, vendors }: ItemFormProps) {
     item?.specifications_parsed || {}
   );
   const [tags, setTags] = useState<string[]>(item?.tags_parsed || []);
+
+  // State for dynamically created categories/vendors
+  const [categories, setCategories] = useState(initialCategories);
+  const [vendors, setVendors] = useState(initialVendors);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(item?.category_id || '');
+  const [selectedVendorId, setSelectedVendorId] = useState(item?.vendor_id || '');
+
+  // State for validated number fields
+  const [quantity, setQuantity] = useState(item?.quantity?.toString() || '0');
+  const [minQuantity, setMinQuantity] = useState(item?.min_quantity?.toString() || '0');
+  const [purchasePrice, setPurchasePrice] = useState(item?.purchase_price?.toString() || '');
+
+  // Validate and sanitize numeric input (allows decimals)
+  const handleNumericInput = (
+    value: string,
+    setter: (val: string) => void,
+    allowDecimals = true
+  ) => {
+    // Remove any non-numeric characters except decimal point
+    let sanitized = value.replace(allowDecimals ? /[^0-9.]/g : /[^0-9]/g, '');
+
+    // Ensure only one decimal point
+    if (allowDecimals) {
+      const parts = sanitized.split('.');
+      if (parts.length > 2) {
+        sanitized = parts[0] + '.' + parts.slice(1).join('');
+      }
+    }
+
+    setter(sanitized);
+  };
+
+  // Create new category
+  const handleCreateCategory = async (name: string): Promise<ComboboxOption | null> => {
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create category');
+      }
+
+      const category = await res.json();
+      setCategories((prev) => [...prev, category]);
+      return { value: category.id, label: category.name };
+    } catch (err) {
+      console.error('Failed to create category:', err);
+      return null;
+    }
+  };
+
+  // Create new vendor
+  const handleCreateVendor = async (name: string): Promise<ComboboxOption | null> => {
+    try {
+      const res = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create vendor');
+      }
+
+      const vendor = await res.json();
+      setVendors((prev) => [...prev, vendor]);
+      return { value: vendor.id, label: vendor.name };
+    } catch (err) {
+      console.error('Failed to create vendor:', err);
+      return null;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,22 +118,22 @@ export function ItemForm({ item, categories, vendors }: ItemFormProps) {
       description: (formData.get('description') as string) || undefined,
       tracking_mode: trackingMode,
       location: (formData.get('location') as string) || undefined,
-      category_id: (formData.get('category_id') as string) || undefined,
-      vendor_id: (formData.get('vendor_id') as string) || undefined,
+      category_id: selectedCategoryId || undefined,
+      vendor_id: selectedVendorId || undefined,
       specifications,
       tags,
       notes: (formData.get('notes') as string) || undefined,
       purchase_url: (formData.get('purchase_url') as string) || undefined,
       datasheet_url: (formData.get('datasheet_url') as string) || undefined,
-      quantity: trackingMode === 'quantity' ? parseInt(formData.get('quantity') as string) || 0 : undefined,
-      min_quantity: trackingMode === 'quantity' ? parseInt(formData.get('min_quantity') as string) || 0 : undefined,
+      quantity: trackingMode === 'quantity' ? parseFloat(quantity) || 0 : undefined,
+      min_quantity: trackingMode === 'quantity' ? parseFloat(minQuantity) || 0 : undefined,
       unit: trackingMode === 'quantity' ? (formData.get('unit') as string) || 'pcs' : undefined,
       serial_number: trackingMode === 'individual' ? (formData.get('serial_number') as string) || undefined : undefined,
       asset_tag: trackingMode === 'individual' ? (formData.get('asset_tag') as string) || undefined : undefined,
       condition: trackingMode === 'individual' ? (formData.get('condition') as ItemCondition) || 'working' : undefined,
       purchase_date: trackingMode === 'individual' ? (formData.get('purchase_date') as string) || undefined : undefined,
       warranty_expiry: trackingMode === 'individual' ? (formData.get('warranty_expiry') as string) || undefined : undefined,
-      purchase_price: (formData.get('purchase_price') as string) ? parseFloat(formData.get('purchase_price') as string) : undefined,
+      purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
       purchase_currency: (formData.get('purchase_currency') as string) || 'USD',
     };
 
@@ -122,24 +201,26 @@ export function ItemForm({ item, categories, vendors }: ItemFormProps) {
           />
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <Select
+            <Combobox
               name="category_id"
               label="Category"
-              defaultValue={item?.category_id || ''}
-              options={[
-                { value: '', label: 'Select category...' },
-                ...categories.map((c) => ({ value: c.id, label: c.name })),
-              ]}
+              placeholder="Search or create category..."
+              value={selectedCategoryId}
+              onChange={(value) => setSelectedCategoryId(value)}
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              onCreateNew={handleCreateCategory}
+              createLabel="Create category"
             />
 
-            <Select
+            <Combobox
               name="vendor_id"
               label="Vendor/Source"
-              defaultValue={item?.vendor_id || ''}
-              options={[
-                { value: '', label: 'Select vendor...' },
-                ...vendors.map((v) => ({ value: v.id, label: v.name })),
-              ]}
+              placeholder="Search or create vendor..."
+              value={selectedVendorId}
+              onChange={(value) => setSelectedVendorId(value)}
+              options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+              onCreateNew={handleCreateVendor}
+              createLabel="Create vendor"
             />
           </div>
         </CardContent>
@@ -189,26 +270,40 @@ export function ItemForm({ item, categories, vendors }: ItemFormProps) {
 
           {trackingMode === 'quantity' ? (
             <div className="grid sm:grid-cols-3 gap-4">
-              <Input
-                name="quantity"
-                label="Quantity"
-                type="number"
-                min={0}
-                defaultValue={item?.quantity || 0}
-              />
-              <Input
-                name="min_quantity"
-                label="Low Stock Alert"
-                type="number"
-                min={0}
-                defaultValue={item?.min_quantity || 0}
-                placeholder="0 = no alert"
-              />
-              <Input
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Quantity
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={quantity}
+                  onChange={(e) => handleNumericInput(e.target.value, setQuantity)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                             focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Low Stock Alert
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={minQuantity}
+                  onChange={(e) => handleNumericInput(e.target.value, setMinQuantity)}
+                  placeholder="0 = no alert"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                             focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                />
+              </div>
+              <Select
                 name="unit"
                 label="Unit"
                 defaultValue={item?.unit || 'pcs'}
-                placeholder="pcs, meters, etc."
+                options={UNITS.map((u) => ({ value: u.value, label: u.label }))}
               />
             </div>
           ) : (
@@ -283,14 +378,24 @@ export function ItemForm({ item, categories, vendors }: ItemFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Input
-              name="purchase_price"
-              label="Purchase Price"
-              type="number"
-              step="0.01"
-              min={0}
-              defaultValue={item?.purchase_price || ''}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Purchase Price
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={purchasePrice}
+                  onChange={(e) => handleNumericInput(e.target.value, setPurchasePrice)}
+                  placeholder="0.00"
+                  className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                             focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                />
+              </div>
+            </div>
             <Select
               name="purchase_currency"
               label="Currency"
