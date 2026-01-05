@@ -41,7 +41,9 @@ ENV_VARIABLES = [
         "required": False,
         "sensitive": False,
         "default": "homelab-inventory",
-        "help": "The hostname used to access this service on Tailscale."
+        "help": "The hostname used to access this service on Tailscale.\n"
+                "         Must be DNS-compatible (lowercase, no spaces).",
+        "sanitize": "hostname"
     },
 ]
 
@@ -90,6 +92,24 @@ def mask_value(value: str, show_chars: int = 4) -> str:
     if len(value) <= show_chars:
         return "*" * len(value)
     return "*" * (len(value) - show_chars) + value[-show_chars:]
+
+
+def sanitize_hostname(hostname: str) -> str:
+    """Sanitize a hostname to be DNS-compatible.
+
+    - Lowercase
+    - Replace spaces and special chars with hyphens
+    - Remove consecutive hyphens
+    - Remove leading/trailing hyphens
+    """
+    import re
+    # Lowercase and replace non-alphanumeric (except hyphen) with hyphen
+    sanitized = re.sub(r'[^a-z0-9-]', '-', hostname.lower())
+    # Remove consecutive hyphens
+    sanitized = re.sub(r'-+', '-', sanitized)
+    # Remove leading/trailing hyphens
+    sanitized = sanitized.strip('-')
+    return sanitized or 'homelab-inventory'
 
 
 def read_env_file() -> dict:
@@ -164,6 +184,14 @@ def prompt_for_value(var_config: dict, current_value: Optional[str]) -> str:
             print_warning("This field is required.")
             return prompt_for_value(var_config, current_value)
         return default if not current_value else current_value
+
+    # Apply sanitization if configured
+    sanitize_type = var_config.get("sanitize")
+    if sanitize_type == "hostname" and new_value:
+        sanitized = sanitize_hostname(new_value)
+        if sanitized != new_value:
+            print(f"  {Colors.YELLOW}Note: Sanitized to '{sanitized}'{Colors.ENDC}")
+            new_value = sanitized
 
     return new_value
 
