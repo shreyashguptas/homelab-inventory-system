@@ -133,22 +133,22 @@ export function TempImageUploader({
 
               {/* Primary badge */}
               {image.isPrimary && (
-                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-primary-500 text-white text-xs rounded">
+                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-primary-500 text-white text-xs rounded shadow">
                   Primary
                 </div>
               )}
 
-              {/* Overlay actions - always visible on touch, hover on desktop */}
-              <div className="absolute inset-0 bg-black/50 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              {/* Action buttons - always visible in corner */}
+              <div className="absolute top-1 right-1 flex gap-1">
                 {!image.isPrimary && (
                   <button
                     type="button"
                     onClick={() => handleSetPrimary(image.id)}
                     disabled={disabled}
-                    className="p-2 sm:p-1.5 bg-white rounded-full text-gray-700 hover:bg-gray-100 disabled:opacity-50 touch-manipulation"
+                    className="p-1.5 bg-white/90 hover:bg-white rounded-full text-gray-700 shadow-sm disabled:opacity-50 touch-manipulation"
                     title="Set as primary"
                   >
-                    <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -162,15 +162,15 @@ export function TempImageUploader({
                   type="button"
                   onClick={() => handleDelete(image.id)}
                   disabled={disabled}
-                  className="p-2 sm:p-1.5 bg-white rounded-full text-red-600 hover:bg-gray-100 disabled:opacity-50 touch-manipulation"
+                  className="p-1.5 bg-white/90 hover:bg-white rounded-full text-red-600 shadow-sm disabled:opacity-50 touch-manipulation"
                   title="Delete image"
                 >
-                  <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
                 </button>
@@ -219,22 +219,22 @@ export function TempImageUploader({
             />
           </svg>
 
-          <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-            {disabled ? (
-              'Upload disabled'
-            ) : (
-              <span className="sm:hidden">Tap to add images</span>
-            )}
-            {!disabled && (
-              <span className="hidden sm:inline">
-                Drag and drop images here, or{' '}
-                <span className="text-primary-600 dark:text-primary-400">browse</span>
-              </span>
-            )}
-          </p>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-            {images.length}/{maxImages} images
-          </p>
+          {disabled ? (
+            <p className="mt-2 text-xs sm:text-sm text-gray-500">Upload disabled</p>
+          ) : (
+            <>
+              <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                <span className="sm:hidden">Tap to add images</span>
+                <span className="hidden sm:inline">
+                  Drag and drop or{' '}
+                  <span className="text-primary-600 dark:text-primary-400">browse</span>
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {images.length}/{maxImages} · PNG, JPG, WebP · Max 10MB
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
