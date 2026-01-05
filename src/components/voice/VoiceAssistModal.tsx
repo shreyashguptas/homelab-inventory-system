@@ -207,26 +207,27 @@ export function VoiceAssistModal({
 
   const renderStepIndicator = () => {
     const steps = [
-      { key: 'images', label: '1. Images', active: step === 'images' },
-      { key: 'voice', label: '2. Voice', active: step === 'voice' },
-      { key: 'processing', label: '3. Process', active: step === 'processing' || step === 'complete' || step === 'error' },
+      { key: 'images', label: '1. Images', shortLabel: '1', active: step === 'images' },
+      { key: 'voice', label: '2. Voice', shortLabel: '2', active: step === 'voice' },
+      { key: 'processing', label: '3. Process', shortLabel: '3', active: step === 'processing' || step === 'complete' || step === 'error' },
     ];
 
     return (
-      <div className="flex items-center justify-center gap-2 mb-6">
+      <div className="flex items-center justify-center gap-1 sm:gap-2 mb-4 sm:mb-6">
         {steps.map((s, i) => (
           <div key={s.key} className="flex items-center">
             <div
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${
                 s.active
                   ? 'bg-primary-500 text-white'
                   : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
               }`}
             >
-              {s.label}
+              <span className="hidden sm:inline">{s.label}</span>
+              <span className="sm:hidden">{s.shortLabel}</span>
             </div>
             {i < steps.length - 1 && (
-              <div className="w-8 h-0.5 bg-gray-300 dark:bg-gray-600 mx-1" />
+              <div className="w-4 sm:w-8 h-0.5 bg-gray-300 dark:bg-gray-600 mx-0.5 sm:mx-1" />
             )}
           </div>
         ))}
@@ -262,12 +263,12 @@ export function VoiceAssistModal({
   };
 
   const renderProcessingSteps = () => (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {processingSteps.map((ps) => (
-        <div key={ps.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-          <div className="flex items-center gap-3">
+        <div key={ps.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {renderProcessingStepIcon(ps.status)}
-            <span className={`font-medium ${
+            <span className={`font-medium text-sm sm:text-base ${
               ps.status === 'failed' ? 'text-red-600 dark:text-red-400' :
               ps.status === 'completed' ? 'text-green-600 dark:text-green-400' :
               ps.status === 'running' ? 'text-primary-600 dark:text-primary-400' :
@@ -279,22 +280,22 @@ export function VoiceAssistModal({
 
           {/* Show output */}
           {ps.output && ps.status === 'completed' && (
-            <div className="mt-2 ml-8">
+            <div className="mt-2 ml-7 sm:ml-8">
               {ps.id === 'transcribe' ? (
-                <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
+                <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs sm:text-sm max-h-24 overflow-y-auto">
                   <span className="text-gray-500 dark:text-gray-400 text-xs block mb-1">Transcribed text:</span>
                   <p className="text-gray-700 dark:text-gray-300 italic">&quot;{ps.output}&quot;</p>
                 </div>
               ) : (
-                <span className="text-sm text-gray-500 dark:text-gray-400">{ps.output}</span>
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{ps.output}</span>
               )}
             </div>
           )}
 
           {/* Show error */}
           {ps.error && ps.status === 'failed' && (
-            <div className="mt-2 ml-8 p-2 bg-red-50 dark:bg-red-900/20 rounded">
-              <span className="text-sm text-red-600 dark:text-red-400">{ps.error}</span>
+            <div className="mt-2 ml-7 sm:ml-8 p-2 bg-red-50 dark:bg-red-900/20 rounded">
+              <span className="text-xs sm:text-sm text-red-600 dark:text-red-400 break-words">{ps.error}</span>
             </div>
           )}
         </div>
@@ -306,8 +307,8 @@ export function VoiceAssistModal({
     switch (step) {
       case 'images':
         return (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+          <div className="space-y-3 sm:space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
               Upload up to 3 images of the item (optional). The first image will be the primary image.
             </p>
             <TempImageUploader
@@ -315,12 +316,12 @@ export function VoiceAssistModal({
               onImagesChange={setImages}
               maxImages={3}
             />
-            <div className="flex justify-between pt-4">
-              <Button type="button" variant="ghost" onClick={handleSkipImages}>
+            <div className="flex flex-col sm:flex-row justify-between gap-2 pt-3 sm:pt-4">
+              <Button type="button" variant="ghost" onClick={handleSkipImages} className="order-2 sm:order-1">
                 Skip Images
               </Button>
-              <Button type="button" onClick={handleContinueToVoice}>
-                {images.length > 0 ? 'Continue' : 'Continue without images'}
+              <Button type="button" onClick={handleContinueToVoice} className="order-1 sm:order-2">
+                Continue
               </Button>
             </div>
           </div>
@@ -328,13 +329,13 @@ export function VoiceAssistModal({
 
       case 'voice':
         return (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              Describe the item you want to add. Include details like name, quantity, location, price, and specifications.
+          <div className="space-y-3 sm:space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
+              Describe the item you want to add. Include details like name, quantity, location, and price.
             </p>
 
             {images.length > 0 && (
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-500">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -344,9 +345,9 @@ export function VoiceAssistModal({
 
             <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
 
-            <div className="flex justify-start pt-4">
+            <div className="flex justify-start pt-3 sm:pt-4">
               <Button type="button" variant="ghost" onClick={handleBackToImages}>
-                Back to Images
+                Back
               </Button>
             </div>
           </div>
@@ -354,8 +355,8 @@ export function VoiceAssistModal({
 
       case 'processing':
         return (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+          <div className="space-y-3 sm:space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center mb-2 sm:mb-4">
               Processing your recording...
             </p>
             {renderProcessingSteps()}
@@ -364,46 +365,46 @@ export function VoiceAssistModal({
 
       case 'complete':
         return (
-          <div className="space-y-4">
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="p-2 sm:p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="font-medium text-green-800 dark:text-green-300">Processing Complete!</span>
+                <span className="font-medium text-sm sm:text-base text-green-800 dark:text-green-300">Processing Complete!</span>
               </div>
             </div>
 
             {renderProcessingSteps()}
 
             {extractedData && (
-              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg max-h-32 overflow-y-auto">
                 <span className="text-xs text-gray-500 dark:text-gray-400 block mb-2">Extracted data preview:</span>
-                <div className="text-sm space-y-1">
+                <div className="text-xs sm:text-sm space-y-1">
                   {extractedData.name && (
                     <p><span className="text-gray-500">Name:</span> <span className="font-medium">{extractedData.name}</span></p>
                   )}
                   {extractedData.description && (
-                    <p><span className="text-gray-500">Description:</span> {extractedData.description}</p>
+                    <p className="line-clamp-2"><span className="text-gray-500">Description:</span> {extractedData.description}</p>
                   )}
                   {extractedData.quantity && (
-                    <p><span className="text-gray-500">Quantity:</span> {extractedData.quantity}</p>
+                    <p><span className="text-gray-500">Qty:</span> {extractedData.quantity}</p>
                   )}
                   {extractedData.location && (
                     <p><span className="text-gray-500">Location:</span> {extractedData.location}</p>
                   )}
                   {extractedData.category_name_suggestion && (
-                    <p><span className="text-gray-500">Category suggestion:</span> {extractedData.category_name_suggestion}</p>
+                    <p><span className="text-gray-500">Category:</span> {extractedData.category_name_suggestion}</p>
                   )}
                 </div>
               </div>
             )}
 
-            <div className="flex justify-center gap-3 pt-2">
-              <Button type="button" variant="ghost" onClick={handleStartOver}>
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3 pt-2">
+              <Button type="button" variant="ghost" onClick={handleStartOver} className="order-2 sm:order-1">
                 Start Over
               </Button>
-              <Button type="button" onClick={handleApplyData}>
+              <Button type="button" onClick={handleApplyData} className="order-1 sm:order-2">
                 Apply to Form
               </Button>
             </div>
@@ -412,19 +413,19 @@ export function VoiceAssistModal({
 
       case 'error':
         return (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {renderProcessingSteps()}
 
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
-              <h4 className="font-medium text-red-800 dark:text-red-300 mb-1">Processing Failed</h4>
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+            <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
+              <h4 className="font-medium text-sm sm:text-base text-red-800 dark:text-red-300 mb-1">Processing Failed</h4>
+              <p className="text-xs sm:text-sm text-red-700 dark:text-red-400 break-words">{error}</p>
             </div>
-            <div className="flex justify-center gap-3">
-              <Button type="button" variant="ghost" onClick={handleStartOver}>
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+              <Button type="button" variant="ghost" onClick={handleStartOver} className="order-2 sm:order-1">
                 Start Over
               </Button>
-              <Button type="button" onClick={handleRetry}>
-                Try Recording Again
+              <Button type="button" onClick={handleRetry} className="order-1 sm:order-2">
+                Try Again
               </Button>
             </div>
           </div>
@@ -437,7 +438,7 @@ export function VoiceAssistModal({
       isOpen={isOpen}
       onClose={handleClose}
       title="Add Item with Voice"
-      size="lg"
+      size="md"
     >
       {renderStepIndicator()}
       {renderContent()}

@@ -119,7 +119,7 @@ export function TempImageUploader({
 
       {/* Image preview grid */}
       {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
           {images.map((image) => (
             <div
               key={image.id}
@@ -138,17 +138,17 @@ export function TempImageUploader({
                 </div>
               )}
 
-              {/* Overlay actions */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              {/* Overlay actions - always visible on touch, hover on desktop */}
+              <div className="absolute inset-0 bg-black/50 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 {!image.isPrimary && (
                   <button
                     type="button"
                     onClick={() => handleSetPrimary(image.id)}
                     disabled={disabled}
-                    className="p-1.5 bg-white rounded-full text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    className="p-2 sm:p-1.5 bg-white rounded-full text-gray-700 hover:bg-gray-100 disabled:opacity-50 touch-manipulation"
                     title="Set as primary"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -162,10 +162,10 @@ export function TempImageUploader({
                   type="button"
                   onClick={() => handleDelete(image.id)}
                   disabled={disabled}
-                  className="p-1.5 bg-white rounded-full text-red-600 hover:bg-gray-100 disabled:opacity-50"
+                  className="p-2 sm:p-1.5 bg-white rounded-full text-red-600 hover:bg-gray-100 disabled:opacity-50 touch-manipulation"
                   title="Delete image"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -186,12 +186,13 @@ export function TempImageUploader({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          onClick={() => !disabled && fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors cursor-pointer ${
             disabled
               ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 cursor-not-allowed'
               : dragOver
               ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 active:border-primary-400'
           }`}
         >
           <input
@@ -205,7 +206,7 @@ export function TempImageUploader({
           />
 
           <svg
-            className="mx-auto h-10 w-10 text-gray-400"
+            className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-gray-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -218,24 +219,21 @@ export function TempImageUploader({
             />
           </svg>
 
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
             {disabled ? (
               'Upload disabled'
             ) : (
-              <>
+              <span className="sm:hidden">Tap to add images</span>
+            )}
+            {!disabled && (
+              <span className="hidden sm:inline">
                 Drag and drop images here, or{' '}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                >
-                  browse
-                </button>
-              </>
+                <span className="text-primary-600 dark:text-primary-400">browse</span>
+              </span>
             )}
           </p>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-            {images.length}/{maxImages} images (PNG, JPG, WebP up to 10MB)
+            {images.length}/{maxImages} images
           </p>
         </div>
       )}

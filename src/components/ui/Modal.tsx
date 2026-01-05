@@ -47,20 +47,21 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4"
     >
       <div
         className={clsx(
-          'w-full bg-white rounded-xl shadow-xl dark:bg-gray-900',
+          'w-full bg-white rounded-xl shadow-xl dark:bg-gray-900 max-h-[90vh] flex flex-col',
           sizes[size]
         )}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="p-2 -m-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 touch-manipulation"
+              aria-label="Close modal"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -73,7 +74,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );

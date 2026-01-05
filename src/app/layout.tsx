@@ -1,12 +1,30 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Header } from '@/components/layout/Header';
 import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+  ],
+};
 
 export const metadata: Metadata = {
   title: 'Lab Inventory',
   description: 'Home lab inventory management system',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Lab Inventory',
+  },
   icons: {
     icon: '/favicon.svg',
+    apple: '/icons/apple-touch-icon.png',
   },
 };
 
