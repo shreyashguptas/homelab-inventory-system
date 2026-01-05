@@ -7,15 +7,16 @@ It manages environment variables, runs pre-deployment checks, and starts the
 Docker containers.
 
 Usage:
-    python setup.py          # Interactive setup
-    python setup.py --build  # Force rebuild containers
-    python setup.py --down   # Stop and remove containers
+    python setup.py              # Interactive setup (asks what to do)
+    python setup.py --rebuild    # Full rebuild: down, build --no-cache, up
+    python setup.py --status     # Check container status
+    python setup.py --down       # Stop and remove containers
+    python setup.py --logs       # Follow container logs
 """
 
 import os
 import sys
 import subprocess
-import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -95,19 +96,10 @@ def mask_value(value: str, show_chars: int = 4) -> str:
 
 
 def sanitize_hostname(hostname: str) -> str:
-    """Sanitize a hostname to be DNS-compatible.
-
-    - Lowercase
-    - Replace spaces and special chars with hyphens
-    - Remove consecutive hyphens
-    - Remove leading/trailing hyphens
-    """
+    """Sanitize a hostname to be DNS-compatible."""
     import re
-    # Lowercase and replace non-alphanumeric (except hyphen) with hyphen
     sanitized = re.sub(r'[^a-z0-9-]', '-', hostname.lower())
-    # Remove consecutive hyphens
     sanitized = re.sub(r'-+', '-', sanitized)
-    # Remove leading/trailing hyphens
     sanitized = sanitized.strip('-')
     return sanitized or 'homelab-inventory'
 
@@ -156,7 +148,6 @@ def prompt_for_value(var_config: dict, current_value: Optional[str]) -> str:
         for line in help_text.split('\n'):
             print(f"  {Colors.CYAN}{line}{Colors.ENDC}")
 
-    # Show current value
     if current_value:
         display_value = mask_value(current_value) if sensitive else current_value
         print(f"  Current value: {Colors.GREEN}{display_value}{Colors.ENDC}")
@@ -165,13 +156,11 @@ def prompt_for_value(var_config: dict, current_value: Optional[str]) -> str:
         if default:
             print(f"  Default: {Colors.CYAN}{default}{Colors.ENDC}")
 
-    # Prompt for action
     if current_value:
         response = input(f"  Keep current value? [Y/n]: ").strip().lower()
         if response in ('', 'y', 'yes'):
             return current_value
 
-    # Get new value
     prompt = f"  Enter new value"
     if not required:
         prompt += " (or press Enter to skip)"
@@ -185,7 +174,6 @@ def prompt_for_value(var_config: dict, current_value: Optional[str]) -> str:
             return prompt_for_value(var_config, current_value)
         return default if not current_value else current_value
 
-    # Apply sanitization if configured
     sanitize_type = var_config.get("sanitize")
     if sanitize_type == "hostname" and new_value:
         sanitized = sanitize_hostname(new_value)
@@ -200,7 +188,6 @@ def check_docker() -> bool:
     """Check if Docker and Docker Compose are available."""
     print_step("Checking Docker installation...")
 
-    # Check Docker
     try:
         result = subprocess.run(
             ["docker", "--version"],
@@ -213,7 +200,6 @@ def check_docker() -> bool:
         print_error("Docker is not installed or not in PATH")
         return False
 
-    # Check Docker Compose
     try:
         result = subprocess.run(
             ["docker", "compose", "version"],
@@ -226,7 +212,6 @@ def check_docker() -> bool:
         print_error("Docker Compose is not available")
         return False
 
-    # Check Docker daemon
     try:
         subprocess.run(
             ["docker", "info"],
@@ -241,7 +226,20 @@ def check_docker() -> bool:
     return True
 
 
-def run_docker_compose(command: list, description: str) -> bool:
+def is_container_running() -> bool:
+    """Check if the container is currently running."""
+    try:
+        result = subprocess.run(
+            ["docker", "compose", "ps", "-q"],
+            capture_output=True,
+            text=True
+        )
+        return bool(result.stdout.strip())
+    except subprocess.CalledProcessError:
+        return False
+
+
+def run_docker_compose(command: list, description: str, stream_output: bool = False) -> bool:
     """Run a docker compose command."""
     print_step(description)
 
@@ -249,11 +247,18 @@ def run_docker_compose(command: list, description: str) -> bool:
     print(f"  Running: {' '.join(full_command)}")
 
     try:
-        subprocess.run(full_command, check=True)
+        if stream_output:
+            # Stream output in real-time (for logs, build, etc.)
+            subprocess.run(full_command, check=True)
+        else:
+            subprocess.run(full_command, check=True)
         print_success(f"{description} completed successfully")
         return True
     except subprocess.CalledProcessError as e:
         print_error(f"{description} failed with exit code {e.returncode}")
+        return False
+    except KeyboardInterrupt:
+        print_warning("\nOperation cancelled by user")
         return False
 
 
@@ -261,7 +266,6 @@ def setup_environment() -> dict:
     """Interactive setup for environment variables."""
     print_header("Environment Configuration")
 
-    # Read existing values
     current_env = read_env_file()
     new_env = {}
 
@@ -278,7 +282,6 @@ def setup_environment() -> dict:
         print_warning("Setup cancelled by user")
         sys.exit(1)
 
-    # Write the new configuration
     write_env_file(new_env)
     print_success(f"Configuration saved to {ENV_FILE}")
 
@@ -289,7 +292,6 @@ def show_status() -> None:
     """Show current status of the deployment."""
     print_header("Current Status")
 
-    # Check if containers are running
     try:
         result = subprocess.run(
             ["docker", "compose", "ps", "--format", "table {{.Name}}\t{{.Status}}\t{{.Ports}}"],
@@ -305,68 +307,83 @@ def show_status() -> None:
         print_warning("Could not get container status")
 
 
-def main():
-    """Main entry point."""
-    # Parse command line arguments
-    args = sys.argv[1:]
+def prompt_action() -> str:
+    """Prompt user for what action to take."""
+    print("\nWhat would you like to do?")
+    print(f"  {Colors.BOLD}1{Colors.ENDC}) Fresh deploy (first time setup)")
+    print(f"  {Colors.BOLD}2{Colors.ENDC}) Rebuild after code changes (down, build --no-cache, up)")
+    print(f"  {Colors.BOLD}3{Colors.ENDC}) Quick restart (down, up)")
+    print(f"  {Colors.BOLD}4{Colors.ENDC}) View logs")
+    print(f"  {Colors.BOLD}5{Colors.ENDC}) Stop containers")
+    print(f"  {Colors.BOLD}6{Colors.ENDC}) Check status")
+    print(f"  {Colors.BOLD}q{Colors.ENDC}) Quit")
 
-    print_header("Homelab Inventory System Setup")
+    while True:
+        choice = input(f"\nEnter choice [{Colors.CYAN}1-6, q{Colors.ENDC}]: ").strip().lower()
+        if choice in ('1', '2', '3', '4', '5', '6', 'q', 'quit', 'exit'):
+            return choice
+        print_warning("Invalid choice. Please enter 1-6 or q.")
 
-    # Change to script directory
-    script_dir = Path(__file__).parent.resolve()
-    os.chdir(script_dir)
-    print(f"Working directory: {script_dir}")
 
-    # Handle special commands
-    if "--down" in args:
-        if check_docker():
-            run_docker_compose(["down"], "Stopping containers")
-        return
-
-    if "--status" in args:
-        if check_docker():
-            show_status()
-        return
-
-    # Check Docker availability
-    if not check_docker():
-        print_error("Please install Docker and Docker Compose to continue.")
-        sys.exit(1)
-
-    # Setup environment
-    env_vars = setup_environment()
-
-    # Pre-deployment checks (add more here as needed)
-    print_header("Pre-deployment Checks")
-
-    # Check if data directory exists
-    data_dir = Path("data")
-    if not data_dir.exists():
-        print_step("Creating data directory...")
-        data_dir.mkdir(exist_ok=True)
-        print_success("Data directory created")
-    else:
-        print_success("Data directory exists")
-
-    # Deployment
+def do_fresh_deploy(env_vars: dict) -> None:
+    """Perform a fresh deployment."""
     print_header("Deployment")
 
-    # Build and start containers
-    build_flag = "--build" in args
+    # Build and start
+    if not run_docker_compose(["up", "-d", "--build"], "Building and starting containers", stream_output=True):
+        sys.exit(1)
 
-    if build_flag:
-        if not run_docker_compose(["build"], "Building containers"):
-            sys.exit(1)
+    show_final_info(env_vars)
+
+
+def do_rebuild(env_vars: dict) -> None:
+    """Perform a full rebuild after code changes."""
+    print_header("Full Rebuild")
+
+    # Stop existing containers
+    run_docker_compose(["down"], "Stopping existing containers")
+
+    # Build with no cache
+    if not run_docker_compose(["build", "--no-cache"], "Rebuilding containers (no cache)", stream_output=True):
+        sys.exit(1)
+
+    # Start containers
+    if not run_docker_compose(["up", "-d"], "Starting containers"):
+        sys.exit(1)
+
+    show_final_info(env_vars)
+
+
+def do_quick_restart(env_vars: dict) -> None:
+    """Perform a quick restart without rebuilding."""
+    print_header("Quick Restart")
+
+    run_docker_compose(["down"], "Stopping containers")
 
     if not run_docker_compose(["up", "-d"], "Starting containers"):
         sys.exit(1)
 
-    # Show final status
+    show_final_info(env_vars)
+
+
+def do_view_logs() -> None:
+    """View container logs."""
+    print_header("Container Logs")
+    print("Press Ctrl+C to stop viewing logs\n")
+
+    try:
+        subprocess.run(["docker", "compose", "logs", "-f", "--tail", "100"])
+    except KeyboardInterrupt:
+        print("\n")
+        print_success("Stopped viewing logs")
+
+
+def show_final_info(env_vars: dict) -> None:
+    """Show final deployment information."""
     print_header("Deployment Complete!")
 
     show_status()
 
-    # Show access information
     print("\n" + Colors.BOLD + "Access your inventory:" + Colors.ENDC)
     print(f"  Local:     http://localhost:3000")
 
@@ -379,10 +396,132 @@ def main():
         print_warning("Tailscale not configured - only local access available")
 
     print(f"\n{Colors.CYAN}Useful commands:{Colors.ENDC}")
+    print("  python setup.py           # Interactive menu")
+    print("  python setup.py --rebuild # Full rebuild after code changes")
+    print("  python setup.py --logs    # View container logs")
     print("  python setup.py --status  # Check container status")
     print("  python setup.py --down    # Stop containers")
-    print("  python setup.py --build   # Rebuild and restart")
-    print("  docker compose logs -f    # View logs")
+
+
+def main():
+    """Main entry point."""
+    args = sys.argv[1:]
+
+    print_header("Homelab Inventory System Setup")
+
+    # Change to script directory
+    script_dir = Path(__file__).parent.resolve()
+    os.chdir(script_dir)
+    print(f"Working directory: {script_dir}")
+
+    # Handle command line flags
+    if "--help" in args or "-h" in args:
+        print(__doc__)
+        return
+
+    if "--down" in args:
+        if check_docker():
+            run_docker_compose(["down"], "Stopping containers")
+        return
+
+    if "--status" in args:
+        if check_docker():
+            show_status()
+        return
+
+    if "--logs" in args:
+        if check_docker():
+            do_view_logs()
+        return
+
+    if "--rebuild" in args:
+        if not check_docker():
+            print_error("Please install Docker and Docker Compose to continue.")
+            sys.exit(1)
+
+        # Quick env setup (show current values, allow changes)
+        env_vars = setup_environment()
+
+        # Pre-deployment checks
+        print_header("Pre-deployment Checks")
+        data_dir = Path("data")
+        if not data_dir.exists():
+            print_step("Creating data directory...")
+            data_dir.mkdir(exist_ok=True)
+            print_success("Data directory created")
+        else:
+            print_success("Data directory exists")
+
+        do_rebuild(env_vars)
+        return
+
+    # Interactive mode
+    if not check_docker():
+        print_error("Please install Docker and Docker Compose to continue.")
+        sys.exit(1)
+
+    # Check current state
+    container_running = is_container_running()
+    if container_running:
+        print_success("Containers are currently running")
+    else:
+        print_warning("No containers currently running")
+
+    try:
+        while True:
+            choice = prompt_action()
+
+            if choice in ('q', 'quit', 'exit'):
+                print("\nGoodbye!")
+                break
+
+            if choice == '1':  # Fresh deploy
+                env_vars = setup_environment()
+
+                print_header("Pre-deployment Checks")
+                data_dir = Path("data")
+                if not data_dir.exists():
+                    print_step("Creating data directory...")
+                    data_dir.mkdir(exist_ok=True)
+                    print_success("Data directory created")
+                else:
+                    print_success("Data directory exists")
+
+                do_fresh_deploy(env_vars)
+                break
+
+            elif choice == '2':  # Rebuild
+                env_vars = setup_environment()
+
+                print_header("Pre-deployment Checks")
+                data_dir = Path("data")
+                if not data_dir.exists():
+                    data_dir.mkdir(exist_ok=True)
+                    print_success("Data directory created")
+
+                do_rebuild(env_vars)
+                break
+
+            elif choice == '3':  # Quick restart
+                env_vars = read_env_file()
+                do_quick_restart(env_vars)
+                break
+
+            elif choice == '4':  # View logs
+                do_view_logs()
+                # Don't break - return to menu
+
+            elif choice == '5':  # Stop
+                run_docker_compose(["down"], "Stopping containers")
+                break
+
+            elif choice == '6':  # Status
+                show_status()
+                # Don't break - return to menu
+
+    except KeyboardInterrupt:
+        print("\n\nGoodbye!")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

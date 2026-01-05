@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { getDb } from '@/lib/db';
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic';
+
 async function getStats() {
   const db = getDb();
 

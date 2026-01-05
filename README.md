@@ -54,6 +54,22 @@ npm run build
 npm start
 ```
 
+## Command-Line Management
+
+Quick command-line usage:
+
+```bash
+python setup.py              # Interactive menu
+
+python setup.py --rebuild    # Full rebuild (down, build --no-cache, up)
+
+python setup.py --status     # Check container status
+
+python setup.py --down       # Stop containers
+
+python setup.py --logs       # Follow container logs
+```
+
 ## Project Structure
 
 ```
