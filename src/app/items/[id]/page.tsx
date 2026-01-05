@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { itemsRepository } from '@/lib/repositories/items';
-import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
 import { ItemActions } from '@/components/items/ItemActions';
 import { ImageGallery } from '@/components/images/ImageGallery';
 import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay';
+
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ id: string }>;

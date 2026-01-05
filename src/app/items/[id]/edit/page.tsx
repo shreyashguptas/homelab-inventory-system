@@ -4,6 +4,9 @@ import { itemsRepository } from '@/lib/repositories/items';
 import { categoriesRepository } from '@/lib/repositories/categories';
 import { vendorsRepository } from '@/lib/repositories/vendors';
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic';
+
 interface EditItemPageProps {
   params: Promise<{ id: string }>;
 }
