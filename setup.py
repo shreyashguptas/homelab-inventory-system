@@ -9,6 +9,7 @@ Docker containers.
 Usage:
     python setup.py              # Interactive setup (asks what to do)
     python setup.py --rebuild    # Full rebuild: down, build --no-cache, up
+    python setup.py --config     # Edit .env configuration only (no deploy)
     python setup.py --status     # Check container status
     python setup.py --down       # Stop and remove containers
     python setup.py --logs       # Follow container logs
@@ -325,13 +326,14 @@ def prompt_action() -> str:
     print(f"  {Colors.BOLD}4{Colors.ENDC}) View logs")
     print(f"  {Colors.BOLD}5{Colors.ENDC}) Stop containers")
     print(f"  {Colors.BOLD}6{Colors.ENDC}) Check status")
+    print(f"  {Colors.BOLD}7{Colors.ENDC}) Edit .env configuration only")
     print(f"  {Colors.BOLD}q{Colors.ENDC}) Quit")
 
     while True:
-        choice = input(f"\nEnter choice [{Colors.CYAN}1-6, q{Colors.ENDC}]: ").strip().lower()
-        if choice in ('1', '2', '3', '4', '5', '6', 'q', 'quit', 'exit'):
+        choice = input(f"\nEnter choice [{Colors.CYAN}1-7, q{Colors.ENDC}]: ").strip().lower()
+        if choice in ('1', '2', '3', '4', '5', '6', '7', 'q', 'quit', 'exit'):
             return choice
-        print_warning("Invalid choice. Please enter 1-6 or q.")
+        print_warning("Invalid choice. Please enter 1-7 or q.")
 
 
 def do_fresh_deploy(env_vars: dict) -> None:
@@ -443,6 +445,11 @@ def main():
             do_view_logs()
         return
 
+    if "--config" in args:
+        setup_environment()
+        print("\n" + Colors.CYAN + "Note: Configuration saved. Run 'python setup.py --rebuild' to apply changes." + Colors.ENDC)
+        return
+
     if "--rebuild" in args:
         if not check_docker():
             print_error("Please install Docker and Docker Compose to continue.")
@@ -526,6 +533,11 @@ def main():
 
             elif choice == '6':  # Status
                 show_status()
+                # Don't break - return to menu
+
+            elif choice == '7':  # Edit config only
+                setup_environment()
+                print("\n" + Colors.CYAN + "Configuration saved. Select option 3 (Quick restart) to apply changes." + Colors.ENDC)
                 # Don't break - return to menu
 
     except KeyboardInterrupt:

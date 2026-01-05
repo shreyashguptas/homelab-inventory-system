@@ -3,13 +3,13 @@ import type { ExtractedFormData, AIContext } from '@/lib/types/ai';
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
 
 const EXTRACTION_SYSTEM_PROMPT = `You are an inventory data extraction assistant for a homelab inventory management system.
-Given a voice transcription describing an item and optional images of the item, extract structured data to fill out an inventory form.
+Given a voice transcription describing an item, extract structured data to fill out an inventory form.
 
 IMPORTANT RULES:
 1. For category_id and vendor_id, ONLY use IDs from the provided lists if there's a confident match
 2. If a category is mentioned but doesn't match existing ones closely, leave category_id empty and put the suggested name in category_name_suggestion
 3. If a vendor is mentioned but doesn't match existing ones closely, leave vendor_id empty and put the suggested name in vendor_name_suggestion
-4. Be conservative - only extract data you're confident about from the transcription or images
+4. Be conservative - only extract data you're confident about from the transcription
 5. For tracking_mode: use "individual" for unique items (electronics, devices, tools with serial numbers) and "quantity" for consumables, bulk items, or multiples
 6. Extract specifications as key-value pairs from any technical details mentioned (e.g., "RAM": "8GB", "Voltage": "5V")
 7. Generate relevant tags as lowercase strings (e.g., ["raspberry-pi", "sbc", "arm"])
@@ -104,33 +104,8 @@ export async function extractFormData(
     throw new Error('GROQ_API_KEY not configured');
   }
 
-  // Build the user message content with text and images
-  const userContent: Array<{ type: string; text?: string; image_url?: { url: string; detail?: string } }> = [
-    {
-      type: 'text',
-      text: `Voice transcription: "${text}"
-
-Existing categories to match against:
-${JSON.stringify(context.categories, null, 2)}
-
-Existing vendors to match against:
-${JSON.stringify(context.vendors, null, 2)}
-
-Please extract the item information from the transcription${images.length > 0 ? ' and the provided images' : ''} and return a JSON object with the extracted fields.`,
-    },
-  ];
-
-  // Add images if provided
-  for (const imageBase64 of images) {
-    userContent.push({
-      type: 'image_url',
-      image_url: {
-        url: `data:image/webp;base64,${imageBase64}`,
-        detail: 'high',
-      },
-    });
-  }
-
+  // Build the messages for Groq compound model
+  // Note: groq/compound-mini doesn't support images directly, so we only use text
   const messages = [
     {
       role: 'system',
@@ -138,11 +113,20 @@ Please extract the item information from the transcription${images.length > 0 ? 
     },
     {
       role: 'user',
-      content: userContent,
+      content: `Voice transcription: "${text}"
+
+Existing categories to match against:
+${JSON.stringify(context.categories, null, 2)}
+
+Existing vendors to match against:
+${JSON.stringify(context.vendors, null, 2)}
+
+${images.length > 0 ? `Note: ${images.length} image(s) were uploaded with this item and will be attached after form submission.` : ''}
+
+Please extract the item information from the transcription and return a JSON object with the extracted fields.`,
     },
   ];
 
-  // Use Groq's compound model for extraction
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -150,7 +134,7 @@ Please extract the item information from the transcription${images.length > 0 ? 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'compound-beta-mini',
+      model: 'groq/compound-mini',
       messages,
       temperature: 0.1,
       response_format: { type: 'json_object' },

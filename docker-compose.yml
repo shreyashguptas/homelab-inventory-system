@@ -19,6 +19,8 @@ services:
       - TS_AUTHKEY=${TS_AUTHKEY}
       # Optional: Custom hostname on your Tailnet
       - TS_HOSTNAME=${TS_HOSTNAME:-homelab-inventory}
+      # Groq API key for AI features (voice-to-text, form extraction)
+      - GROQ_API_KEY=${GROQ_API_KEY}
       # Node environment
       - NODE_ENV=production
 
