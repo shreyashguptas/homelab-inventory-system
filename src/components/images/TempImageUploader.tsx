@@ -22,7 +22,7 @@ export function TempImageUploader({
 
   const generateId = () => crypto.randomUUID();
 
-  const handleFiles = useCallback(async (files: FileList | null) => {
+  const handleFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     setError(null);
@@ -37,16 +37,14 @@ export function TempImageUploader({
     const filesToProcess = Array.from(files).slice(0, remainingSlots);
 
     for (const file of filesToProcess) {
-      if (!file.type.startsWith('image/')) {
-        setError('Only image files are allowed');
-        continue;
-      }
-
+      // Size check
       if (file.size > 10 * 1024 * 1024) {
         setError('File size must be less than 10MB');
         continue;
       }
 
+      // Trust the browser's accept="image/*" filtering
+      // Create blob URL for preview
       const previewUrl = URL.createObjectURL(file);
       const isFirst = images.length === 0 && newImages.length === 0;
 
