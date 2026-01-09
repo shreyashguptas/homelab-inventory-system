@@ -12,23 +12,42 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', loading, disabled, children, ...props }, ref) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+      'inline-flex items-center justify-center font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none';
 
     const variants = {
-      primary:
-        'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-primary-500 dark:hover:bg-primary-600',
-      secondary:
-        'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700',
-      danger:
-        'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:bg-red-500 dark:hover:bg-red-600',
-      ghost:
-        'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500 dark:text-gray-300 dark:hover:bg-gray-800',
+      primary: clsx(
+        'bg-gradient-to-b from-primary-500 to-primary-600 text-gray-950 font-semibold',
+        'hover:from-primary-400 hover:to-primary-500',
+        'focus:ring-primary-500/50',
+        'shadow-sm hover:shadow-md hover:shadow-primary-500/20',
+        'dark:from-primary-400 dark:to-primary-500 dark:hover:from-primary-300 dark:hover:to-primary-400'
+      ),
+      secondary: clsx(
+        'bg-gray-100 text-gray-700 border border-gray-200',
+        'hover:bg-gray-200 hover:border-gray-300',
+        'focus:ring-gray-400/50',
+        'dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700',
+        'dark:hover:bg-gray-700 dark:hover:border-gray-600'
+      ),
+      danger: clsx(
+        'bg-gradient-to-b from-red-500 to-red-600 text-white',
+        'hover:from-red-400 hover:to-red-500',
+        'focus:ring-red-500/50',
+        'shadow-sm hover:shadow-md hover:shadow-red-500/20',
+        'dark:from-red-500 dark:to-red-600'
+      ),
+      ghost: clsx(
+        'bg-transparent text-gray-600',
+        'hover:bg-gray-100 hover:text-gray-900',
+        'focus:ring-gray-400/50',
+        'dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+      ),
     };
 
     const sizes = {
-      sm: 'px-3 py-1.5 text-sm rounded-md',
-      md: 'px-4 py-2 text-sm rounded-lg',
-      lg: 'px-6 py-3 text-base rounded-lg',
+      sm: 'px-3 py-1.5 text-sm rounded-md gap-1.5',
+      md: 'px-4 py-2 text-sm rounded-lg gap-2',
+      lg: 'px-6 py-2.5 text-base rounded-lg gap-2',
     };
 
     return (
@@ -40,7 +59,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading && (
           <svg
-            className="mr-2 h-4 w-4 animate-spin"
+            className="h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

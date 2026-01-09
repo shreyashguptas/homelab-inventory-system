@@ -6,10 +6,11 @@ import { clsx } from 'clsx';
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   hover?: boolean;
+  variant?: 'default' | 'glass';
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, padding = 'md', hover = false, children, ...props }, ref) => {
+  ({ className, padding = 'md', hover = false, variant = 'default', children, ...props }, ref) => {
     const paddings = {
       none: '',
       sm: 'p-3',
@@ -17,13 +18,30 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       lg: 'p-6',
     };
 
+    const variants = {
+      default: clsx(
+        'bg-white border border-gray-200/80 shadow-sm',
+        'dark:bg-gray-900/80 dark:border-gray-800/80 dark:shadow-none',
+        'dark:backdrop-blur-sm'
+      ),
+      glass: clsx(
+        'bg-white/80 backdrop-blur-md border border-gray-200/50',
+        'dark:bg-gray-900/60 dark:backdrop-blur-xl dark:border-gray-700/50'
+      ),
+    };
+
     return (
       <div
         ref={ref}
         className={clsx(
-          'bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-900 dark:border-gray-800',
+          'rounded-xl transition-all duration-200',
+          variants[variant],
           paddings[padding],
-          hover && 'transition-shadow hover:shadow-md',
+          hover && [
+            'hover:shadow-lg hover:border-gray-300/80',
+            'dark:hover:border-gray-700 dark:hover:shadow-gray-950/50',
+            'cursor-pointer'
+          ],
           className
         )}
         {...props}
@@ -61,7 +79,11 @@ export const CardTitle = forwardRef<HTMLHeadingElement, CardTitleProps>(
     return (
       <h3
         ref={ref}
-        className={clsx('text-lg font-semibold text-gray-900 dark:text-gray-100', className)}
+        className={clsx(
+          'text-base font-semibold text-gray-900 dark:text-gray-50',
+          'tracking-tight',
+          className
+        )}
         {...props}
       >
         {children}
@@ -77,7 +99,11 @@ export type CardContentProps = HTMLAttributes<HTMLDivElement>;
 export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
   ({ className, children, ...props }, ref) => {
     return (
-      <div ref={ref} className={clsx('text-gray-600 dark:text-gray-400', className)} {...props}>
+      <div
+        ref={ref}
+        className={clsx('text-gray-600 dark:text-gray-400', className)}
+        {...props}
+      >
         {children}
       </div>
     );
