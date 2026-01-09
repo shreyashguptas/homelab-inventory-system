@@ -1,10 +1,15 @@
 import { getDb } from '../db';
 import { generateId } from '../utils/uuid';
-import type { Item, ItemWithRelations, ItemImage, TrackingMode } from '../types/database';
+import type { Item, ItemWithRelations, ItemImage, ItemWithImage, TrackingMode } from '../types/database';
 import type { CreateItemRequest, ItemsQueryParams } from '../types/api';
 
 export interface ItemsListResult {
   items: Item[];
+  total: number;
+}
+
+export interface ItemsWithImagesResult {
+  items: ItemWithImage[];
   total: number;
 }
 
@@ -79,6 +84,143 @@ export const itemsRepository = {
     `;
 
     const items = db.prepare(itemsSql).all(...queryParams, limit, offset) as Item[];
+
+    return {
+      items,
+      total: countResult.total,
+    };
+  },
+
+  findAllWithImages(params: ItemsQueryParams = {}): ItemsWithImagesResult {
+    const db = getDb();
+    const {
+      category,
+      vendor,
+      location,
+      tracking_mode,
+      low_stock,
+      q,
+      page = 1,
+      limit = 50,
+      sort_by = 'updated_at',
+      sort_order = 'desc',
+    } = params;
+
+    const conditions: string[] = [];
+    const queryParams: (string | number)[] = [];
+
+    if (category) {
+      conditions.push('i.category_id = ?');
+      queryParams.push(category);
+    }
+
+    if (vendor) {
+      conditions.push('i.vendor_id = ?');
+      queryParams.push(vendor);
+    }
+
+    if (location) {
+      conditions.push('i.location LIKE ?');
+      queryParams.push(`%${location}%`);
+    }
+
+    if (tracking_mode) {
+      conditions.push('i.tracking_mode = ?');
+      queryParams.push(tracking_mode);
+    }
+
+    if (low_stock) {
+      conditions.push('i.tracking_mode = ? AND i.quantity <= i.min_quantity AND i.min_quantity > 0');
+      queryParams.push('quantity');
+    }
+
+    if (q) {
+      conditions.push('i.rowid IN (SELECT rowid FROM items_fts WHERE items_fts MATCH ?)');
+      queryParams.push(q);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Validate sort column to prevent SQL injection
+    const allowedSortColumns = ['name', 'created_at', 'updated_at', 'quantity', 'location'];
+    const safeSortBy = allowedSortColumns.includes(sort_by) ? sort_by : 'updated_at';
+    const safeSortOrder = sort_order === 'asc' ? 'ASC' : 'DESC';
+
+    // Count query
+    const countSql = `SELECT COUNT(*) as total FROM items i ${whereClause}`;
+    const countResult = db.prepare(countSql).get(...queryParams) as { total: number };
+
+    // Items query with pagination and primary image
+    const offset = (page - 1) * limit;
+    const itemsSql = `
+      SELECT i.*,
+        img.id as img_id,
+        img.item_id as img_item_id,
+        img.filename as img_filename,
+        img.original_filename as img_original_filename,
+        img.mime_type as img_mime_type,
+        img.size_bytes as img_size_bytes,
+        img.width as img_width,
+        img.height as img_height,
+        img.is_primary as img_is_primary,
+        img.created_at as img_created_at
+      FROM items i
+      LEFT JOIN (
+        SELECT * FROM images WHERE is_primary = 1
+        UNION ALL
+        SELECT * FROM images WHERE id IN (
+          SELECT MIN(id) FROM images WHERE item_id NOT IN (
+            SELECT item_id FROM images WHERE is_primary = 1
+          ) GROUP BY item_id
+        )
+      ) img ON i.id = img.item_id
+      ${whereClause}
+      ORDER BY i.${safeSortBy} ${safeSortOrder}
+      LIMIT ? OFFSET ?
+    `;
+
+    const rawItems = db.prepare(itemsSql).all(...queryParams, limit, offset) as Record<string, unknown>[];
+
+    const items: ItemWithImage[] = rawItems.map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      description: row.description as string | null,
+      tracking_mode: row.tracking_mode as TrackingMode,
+      quantity: row.quantity as number,
+      min_quantity: row.min_quantity as number,
+      unit: row.unit as string,
+      serial_number: row.serial_number as string | null,
+      asset_tag: row.asset_tag as string | null,
+      condition: row.condition as Item['condition'],
+      purchase_date: row.purchase_date as string | null,
+      warranty_expiry: row.warranty_expiry as string | null,
+      location: row.location as string | null,
+      category_id: row.category_id as string | null,
+      vendor_id: row.vendor_id as string | null,
+      specifications: row.specifications as string,
+      purchase_price: row.purchase_price as number | null,
+      purchase_currency: row.purchase_currency as string,
+      purchase_url: row.purchase_url as string | null,
+      datasheet_url: row.datasheet_url as string | null,
+      notes: row.notes as string | null,
+      tags: row.tags as string,
+      created_at: row.created_at as string,
+      updated_at: row.updated_at as string,
+      primary_image: row.img_id
+        ? {
+            id: row.img_id as string,
+            item_id: row.img_item_id as string,
+            filename: row.img_filename as string,
+            original_filename: row.img_original_filename as string | null,
+            mime_type: row.img_mime_type as string,
+            size_bytes: row.img_size_bytes as number,
+            width: row.img_width as number | null,
+            height: row.img_height as number | null,
+            is_primary: row.img_is_primary as number,
+            created_at: row.img_created_at as string,
+          }
+        : null,
+    }));
 
     return {
       items,

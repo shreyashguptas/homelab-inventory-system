@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ItemCard } from './ItemCard';
 import { Button, Modal } from '@/components/ui';
-import type { Item } from '@/lib/types/database';
+import type { Item, ItemWithImage } from '@/lib/types/database';
 
 interface InventoryGridProps {
-  items: Item[];
+  items: (Item | ItemWithImage)[];
 }
 
 export function InventoryGrid({ items }: InventoryGridProps) {

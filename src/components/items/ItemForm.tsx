@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Combobox } from '@/components/ui';
+import { usePlatform, getModifierKeyDisplay, getShiftKeyDisplay } from '@/hooks/useKeyboardShortcuts';
+import { Kbd } from '@/components/keyboard/KeyboardShortcutsHelp';
 import type { ComboboxOption } from '@/components/ui';
 import { ImageUploader } from '@/components/images/ImageUploader';
 import { TempImageUploader } from '@/components/images/TempImageUploader';
@@ -21,6 +23,9 @@ interface ItemFormProps {
 
 export function ItemForm({ item, categories: initialCategories, vendors: initialVendors }: ItemFormProps) {
   const router = useRouter();
+  const { platform, hasKeyboard, isClient } = usePlatform();
+  const modKey = getModifierKeyDisplay(platform);
+  const shiftKey = getShiftKeyDisplay(platform);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +58,27 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
 
   // Form refs for setting values programmatically
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Keyboard shortcut: Cmd/Ctrl + Shift + Enter to submit form
+  useEffect(() => {
+    if (!hasKeyboard) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const meta = event.metaKey || event.ctrlKey;
+      const shift = event.shiftKey;
+
+      // Cmd/Ctrl + Shift + Enter - Submit form
+      if (meta && shift && event.key === 'Enter') {
+        event.preventDefault();
+        if (formRef.current && !loading) {
+          formRef.current.requestSubmit();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasKeyboard, loading]);
 
   // Validate and sanitize numeric input (allows decimals)
   const handleNumericInput = (
@@ -758,13 +784,23 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
       )}
 
       {/* Submit */}
-      <div className="flex gap-4">
-        <Button type="submit" loading={loading}>
-          {item ? 'Update Item' : 'Create Item'}
-        </Button>
-        <Button type="button" variant="secondary" onClick={() => router.back()}>
-          Cancel
-        </Button>
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <div className="flex gap-4">
+          <Button type="submit" loading={loading}>
+            {item ? 'Update Item' : 'Create Item'}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
+            Cancel
+          </Button>
+        </div>
+        {isClient && hasKeyboard && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <span>or press</span>
+            <Kbd size="sm">{modKey}</Kbd>
+            <Kbd size="sm">{shiftKey}</Kbd>
+            <Kbd size="sm">↵</Kbd>
+          </div>
+        )}
       </div>
       </form>
     </>

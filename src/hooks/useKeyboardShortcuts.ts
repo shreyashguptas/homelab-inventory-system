@@ -155,13 +155,14 @@ export function getModifierKey(): string {
 export const SHORTCUTS: Omit<KeyboardShortcut, 'action'>[] = [
   // Navigation
   { key: 'k', meta: true, description: 'Search', category: 'navigation' },
-  { key: 'n', meta: true, description: 'New Item', category: 'navigation' },
+  { key: 'a', meta: true, shift: true, description: 'Add New Item', category: 'navigation' },
   { key: '1', meta: true, description: 'Go to Dashboard', category: 'navigation' },
   { key: '2', meta: true, description: 'Go to Inventory', category: 'navigation' },
   { key: '3', meta: true, description: 'Go to Categories', category: 'navigation' },
   { key: '4', meta: true, description: 'Go to Vendors', category: 'navigation' },
   // Actions
   { key: 'i', meta: true, shift: true, description: 'Import CSV', category: 'actions' },
+  { key: 'Enter', meta: true, shift: true, description: 'Save item (on form)', category: 'actions' },
   // General
   { key: '/', meta: true, description: 'Show keyboard shortcuts', category: 'general' },
   { key: 'Escape', description: 'Close modal / Go back', category: 'general' },
@@ -197,8 +198,8 @@ export function useKeyboardShortcuts({ onShowHelp, enabled = true }: UseKeyboard
       return;
     }
 
-    // Cmd/Ctrl + N - New Item
-    if (meta && event.key === 'n' && !shift) {
+    // Cmd/Ctrl + Shift + A - Add New Item
+    if (meta && shift && event.key.toLowerCase() === 'a') {
       event.preventDefault();
       router.push('/items/new');
       return;

@@ -14,9 +14,10 @@ interface ItemFiltersProps {
     low_stock?: boolean;
     q?: string;
   };
+  basePath?: string;
 }
 
-export function ItemFilters({ categories, locations, currentFilters }: ItemFiltersProps) {
+export function ItemFilters({ categories, locations, currentFilters, basePath = '/' }: ItemFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -32,11 +33,12 @@ export function ItemFilters({ categories, locations, currentFilters }: ItemFilte
     // Reset to page 1 when filters change
     params.delete('page');
 
-    router.push(`/items?${params.toString()}`);
+    const queryString = params.toString();
+    router.push(queryString ? `${basePath}?${queryString}` : basePath);
   };
 
   const clearFilters = () => {
-    router.push('/items');
+    router.push(basePath);
   };
 
   const hasFilters =

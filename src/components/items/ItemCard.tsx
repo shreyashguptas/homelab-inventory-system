@@ -1,15 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { Card, Badge } from '@/components/ui';
-import type { Item } from '@/lib/types/database';
+import type { Item, ItemWithImage } from '@/lib/types/database';
 
 interface ItemCardProps {
-  item: Item;
+  item: Item | ItemWithImage;
   selectable?: boolean;
   selected?: boolean;
   onSelectionChange?: (id: string, selected: boolean) => void;
+}
+
+function hasImage(item: Item | ItemWithImage): item is ItemWithImage {
+  return 'primary_image' in item && item.primary_image !== null;
 }
 
 export function ItemCard({ item, selectable = false, selected = false, onSelectionChange }: ItemCardProps) {
@@ -48,8 +53,10 @@ export function ItemCard({ item, selectable = false, selected = false, onSelecti
     onSelectionChange?.(item.id, e.target.checked);
   };
 
+  const primaryImage = hasImage(item) ? item.primary_image : null;
+
   return (
-    <Card hover className={`flex flex-col relative ${selected ? 'ring-2 ring-primary-500' : ''}`}>
+    <Card hover className={`flex flex-col relative overflow-hidden ${selected ? 'ring-2 ring-primary-500' : ''}`}>
       {selectable && (
         <div className="absolute top-3 left-3 z-10">
           <input
@@ -62,43 +69,56 @@ export function ItemCard({ item, selectable = false, selected = false, onSelecti
           />
         </div>
       )}
-      <Link href={`/items/${item.id}`} className="flex-1">
-        <div className={`p-4 ${selectable ? 'pl-10' : ''}`}>
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
-              {item.name}
-            </h3>
-            {isLowStock && (
+      <Link href={`/items/${item.id}`} className="flex-1 flex flex-col">
+        {/* Image */}
+        <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800 overflow-hidden">
+          {primaryImage ? (
+            <Image
+              src={`/api/images/${primaryImage.filename}`}
+              alt={item.name}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover transition-transform hover:scale-105"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="h-12 w-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+          )}
+          {isLowStock && (
+            <div className="absolute top-2 right-2">
               <Badge variant="danger" size="sm">
                 Low
               </Badge>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          {/* Description */}
-          {item.description && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">
-              {item.description}
-            </p>
+        <div className={`p-4 flex-1 flex flex-col ${selectable ? 'pl-10' : ''}`}>
+          {/* Header */}
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">
+            {item.name}
+          </h3>
+
+          {/* Location */}
+          {item.location && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
+              <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+              </svg>
+              <span className="truncate">{item.location}</span>
+            </div>
           )}
 
-          {/* Meta info */}
-          <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-            {item.location && (
-              <span className="flex items-center gap-1">
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                </svg>
-                {item.location}
-              </span>
-            )}
-          </div>
+          {/* Spacer to push footer to bottom */}
+          <div className="flex-1" />
         </div>
       </Link>
 

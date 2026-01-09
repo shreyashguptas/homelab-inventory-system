@@ -25,7 +25,7 @@ export default async function ItemsPage({ searchParams }: PageProps) {
   const page = parseInt(params.page || '1');
   const limit = 24;
 
-  const { items, total } = itemsRepository.findAll({
+  const { items, total } = itemsRepository.findAllWithImages({
     category: params.category,
     location: params.location,
     tracking_mode: params.tracking_mode,
@@ -70,6 +70,7 @@ export default async function ItemsPage({ searchParams }: PageProps) {
           low_stock: params.low_stock === 'true',
           q: params.q,
         }}
+        basePath="/items"
       />
 
       {/* Items grid */}

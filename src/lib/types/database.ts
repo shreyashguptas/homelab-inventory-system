@@ -79,6 +79,11 @@ export interface ItemWithRelations extends Item {
   tags_parsed: string[];
 }
 
+// Item with primary image for list views
+export interface ItemWithImage extends Item {
+  primary_image: ItemImage | null;
+}
+
 export interface CategoryWithCount extends Category {
   item_count: number;
 }

@@ -1,9 +1,25 @@
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
+import { Card, Button } from '@/components/ui';
+import { ItemFilters } from '@/components/items/ItemFilters';
+import { InventoryGrid } from '@/components/items/InventoryGrid';
+import { itemsRepository } from '@/lib/repositories/items';
+import { categoriesRepository } from '@/lib/repositories/categories';
 import { getDb } from '@/lib/db';
+import type { TrackingMode } from '@/lib/types/database';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
+
+interface PageProps {
+  searchParams: Promise<{
+    category?: string;
+    location?: string;
+    tracking_mode?: TrackingMode;
+    low_stock?: string;
+    q?: string;
+    page?: string;
+  }>;
+}
 
 async function getStats() {
   const db = getDb();
@@ -32,21 +48,6 @@ async function getStats() {
     total_value: number;
   };
 
-  const recentItems = db.prepare(`
-    SELECT id, name, tracking_mode, quantity, unit, location, created_at
-    FROM items
-    ORDER BY created_at DESC
-    LIMIT 5
-  `).all() as {
-    id: string;
-    name: string;
-    tracking_mode: string;
-    quantity: number;
-    unit: string;
-    location: string | null;
-    created_at: string;
-  }[];
-
   const lowStockItems = db.prepare(`
     SELECT id, name, quantity, min_quantity, unit
     FROM items
@@ -61,11 +62,28 @@ async function getStats() {
     unit: string;
   }[];
 
-  return { stats, recentItems, lowStockItems };
+  return { stats, lowStockItems };
 }
 
-export default async function DashboardPage() {
-  const { stats, recentItems, lowStockItems } = await getStats();
+export default async function DashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const page = parseInt(params.page || '1');
+  const limit = 24;
+
+  const { stats, lowStockItems } = await getStats();
+  const { items, total } = itemsRepository.findAllWithImages({
+    category: params.category,
+    location: params.location,
+    tracking_mode: params.tracking_mode,
+    low_stock: params.low_stock === 'true',
+    q: params.q,
+    page,
+    limit,
+  });
+
+  const categories = categoriesRepository.findAll();
+  const locations = itemsRepository.getUniqueLocations();
+  const totalPages = Math.ceil(total / limit);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -82,7 +100,7 @@ export default async function DashboardPage() {
       value: stats.total_items || 0,
       displayValue: (stats.total_items || 0).toLocaleString(),
       icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       ),
@@ -93,7 +111,7 @@ export default async function DashboardPage() {
       value: stats.total_units || 0,
       displayValue: (stats.total_units || 0).toLocaleString(),
       icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
         </svg>
       ),
@@ -104,7 +122,7 @@ export default async function DashboardPage() {
       value: stats.total_value || 0,
       displayValue: formatCurrency(stats.total_value || 0),
       icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -115,263 +133,164 @@ export default async function DashboardPage() {
       value: stats.unique_locations || 0,
       displayValue: (stats.unique_locations || 0).toLocaleString(),
       icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       ),
       color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20',
     },
-    {
-      label: 'Low Stock',
-      value: stats.low_stock_items || 0,
-      displayValue: (stats.low_stock_items || 0).toLocaleString(),
-      icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-      ),
-      color: stats.low_stock_items > 0 ? 'text-red-600 bg-red-50 dark:bg-red-900/20' : 'text-gray-600 bg-gray-50 dark:bg-gray-800',
-    },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Overview of your home lab inventory
-        </p>
-      </div>
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className="space-y-6">
+      {/* Stats grid - compact on mobile */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map((stat) => (
-          <Card key={stat.label} padding="sm" className="sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className={`p-2 sm:p-3 rounded-lg ${stat.color} flex-shrink-0`}>{stat.icon}</div>
-              <div className="min-w-0">
-                <div className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
-                  {stat.displayValue}
-                </div>
-                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{stat.label}</div>
+          <div
+            key={stat.label}
+            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800"
+          >
+            <div className={`p-2 rounded-lg ${stat.color} flex-shrink-0`}>{stat.icon}</div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+                {stat.displayValue}
               </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{stat.label}</div>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
 
-      {/* Content grid */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent items */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recently Added</CardTitle>
-            <Link
-              href="/items"
-              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
-            >
-              View all →
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {recentItems.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                No items yet.{' '}
-                <Link href="/items/new" className="text-primary-600 hover:underline">
-                  Add your first item
-                </Link>
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {recentItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/items/${item.id}`}
-                    className="flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {item.name}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {item.location || 'No location'}
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {item.tracking_mode === 'quantity'
-                        ? `${item.quantity} ${item.unit}`
-                        : 'Individual'}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Low stock alert banner - only show if there are low stock items */}
+      {lowStockItems.length > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <div className="p-2 bg-red-100 dark:bg-red-800/50 rounded-lg">
+            <svg className="h-5 w-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-red-800 dark:text-red-200">
+              {lowStockItems.length} item{lowStockItems.length !== 1 ? 's' : ''} low on stock
+            </div>
+            <div className="text-sm text-red-600 dark:text-red-400 truncate">
+              {lowStockItems.slice(0, 3).map(i => i.name).join(', ')}
+              {lowStockItems.length > 3 && ` and ${lowStockItems.length - 3} more`}
+            </div>
+          </div>
+          <Link
+            href="/?low_stock=true"
+            className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-800/50 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+          >
+            View all
+          </Link>
+        </div>
+      )}
 
-        {/* Low stock alerts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Low Stock Alerts</CardTitle>
-            {lowStockItems.length > 0 && (
-              <Link
-                href="/items?low_stock=true"
-                className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
+      {/* Inventory section */}
+      <div className="space-y-4">
+        {/* Header with count */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Inventory
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {total} {total === 1 ? 'item' : 'items'}
+              {(params.category || params.location || params.tracking_mode || params.low_stock || params.q) && ' (filtered)'}
+            </p>
+          </div>
+          <Link href="/import">
+            <Button variant="secondary" size="sm">
+              <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Import
+            </Button>
+          </Link>
+        </div>
+
+        {/* Filters */}
+        <ItemFilters
+          categories={categories}
+          locations={locations}
+          currentFilters={{
+            category: params.category,
+            location: params.location,
+            tracking_mode: params.tracking_mode,
+            low_stock: params.low_stock === 'true',
+            q: params.q,
+          }}
+        />
+
+        {/* Items grid */}
+        {items.length === 0 ? (
+          <Card padding="lg">
+            <div className="text-center py-12">
+              <svg
+                className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                View all →
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
+                No items found
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                {params.q || params.category || params.location || params.low_stock
+                  ? 'Try adjusting your filters'
+                  : 'Get started by adding your first item'}
+              </p>
+              <Link href="/items/new">
+                <Button>Add your first item</Button>
+              </Link>
+            </div>
+          </Card>
+        ) : (
+          <InventoryGrid items={items} />
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2">
+            {page > 1 && (
+              <Link
+                href={{
+                  pathname: '/',
+                  query: { ...params, page: page - 1 },
+                }}
+              >
+                <Button variant="secondary" size="sm">
+                  Previous
+                </Button>
               </Link>
             )}
-          </CardHeader>
-          <CardContent>
-            {lowStockItems.length === 0 ? (
-              <div className="text-center py-8">
-                <svg
-                  className="h-12 w-12 mx-auto text-green-500 mb-3"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="text-gray-500 dark:text-gray-400">All items are well stocked!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {lowStockItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/items/${item.id}`}
-                    className="flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {item.name}
-                      </div>
-                      <div className="text-sm text-red-500">
-                        {item.quantity} / {item.min_quantity} {item.unit}
-                      </div>
-                    </div>
-                    <div className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">
-                      Low
-                    </div>
-                  </Link>
-                ))}
-              </div>
+            <span className="text-sm text-gray-500 dark:text-gray-400 px-4">
+              Page {page} of {totalPages}
+            </span>
+            {page < totalPages && (
+              <Link
+                href={{
+                  pathname: '/',
+                  query: { ...params, page: page + 1 },
+                }}
+              >
+                <Button variant="secondary" size="sm">
+                  Next
+                </Button>
+              </Link>
             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/items/new"
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors dark:border-gray-700 dark:hover:border-primary-600 dark:hover:bg-primary-900/20"
-            >
-              <svg
-                className="h-8 w-8 text-primary-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">Add Item</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Add new inventory item
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              href="/import"
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors dark:border-gray-700 dark:hover:border-primary-600 dark:hover:bg-primary-900/20"
-            >
-              <svg
-                className="h-8 w-8 text-primary-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                />
-              </svg>
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">Import CSV</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Bulk import items</div>
-              </div>
-            </Link>
-
-            <Link
-              href="/categories"
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors dark:border-gray-700 dark:hover:border-primary-600 dark:hover:bg-primary-900/20"
-            >
-              <svg
-                className="h-8 w-8 text-primary-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                />
-              </svg>
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">Categories</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Manage categories</div>
-              </div>
-            </Link>
-
-            <Link
-              href="/vendors"
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors dark:border-gray-700 dark:hover:border-primary-600 dark:hover:bg-primary-900/20"
-            >
-              <svg
-                className="h-8 w-8 text-primary-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">Vendors</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Manage vendors</div>
-              </div>
-            </Link>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   );
 }
