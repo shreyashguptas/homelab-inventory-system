@@ -4,28 +4,31 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import { QuickSearch } from '../search/QuickSearch';
-import { ThemeToggle } from './ThemeToggle';
+import { Kbd } from '../keyboard/KeyboardShortcutsHelp';
+import { usePlatform, getModifierKeyDisplay } from '@/hooks/useKeyboardShortcuts';
 
 const navigation = [
-  { name: 'Dashboard', href: '/' },
-  { name: 'Inventory', href: '/items' },
-  { name: 'Categories', href: '/categories' },
-  { name: 'Vendors', href: '/vendors' },
+  { name: 'Dashboard', href: '/', shortcut: '1' },
+  { name: 'Inventory', href: '/items', shortcut: '2' },
+  { name: 'Categories', href: '/categories', shortcut: '3' },
+  { name: 'Vendors', href: '/vendors', shortcut: '4' },
 ];
 
 export function Header() {
   const pathname = usePathname();
+  const { platform, hasKeyboard, isClient } = usePlatform();
+  const modKey = getModifierKeyDisplay(platform);
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/80 dark:bg-gray-950/90 dark:border-gray-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center h-16 gap-4 sm:gap-6 lg:gap-8">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
             <div className="relative">
               <div className="absolute inset-0 bg-primary-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
               <svg
-                className="h-8 w-8 text-primary-500 relative"
+                className="h-7 w-7 sm:h-8 sm:w-8 text-primary-500 relative"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -43,8 +46,8 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Navigation - Desktop */}
+          <nav className="hidden md:flex items-center gap-1 flex-shrink-0">
             {navigation.map((item) => {
               const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
               return (
@@ -57,70 +60,55 @@ export function Header() {
                       ? 'text-primary-600 dark:text-primary-400'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/80 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/50'
                   )}
+                  title={`${modKey}${item.shortcut}`}
                 >
                   {isActive && (
                     <span className="absolute inset-x-1 -bottom-[1px] h-0.5 bg-primary-500 rounded-full" />
                   )}
-                  {item.name}
+                  <span className="flex items-center gap-2">
+                    {item.name}
+                    {isClient && hasKeyboard && (
+                      <Kbd size="sm">{item.shortcut}</Kbd>
+                    )}
+                  </span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* Search and actions */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block">
-              <QuickSearch />
-            </div>
-            <ThemeToggle />
-            <Link
-              href="/items/new"
-              className={clsx(
-                'inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg',
-                'bg-gradient-to-b from-primary-500 to-primary-600 text-gray-950',
-                'hover:from-primary-400 hover:to-primary-500',
-                'shadow-sm hover:shadow-md hover:shadow-primary-500/20',
-                'transition-all duration-150',
-                'dark:from-primary-400 dark:to-primary-500'
-              )}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              <span className="hidden sm:inline">Add Item</span>
-            </Link>
+          {/* Spacer - only on desktop */}
+          <div className="hidden md:block flex-1" />
+
+          {/* Search - takes remaining space on mobile, fixed width on desktop */}
+          <div className="flex-1 min-w-0 md:flex-none md:w-48 lg:w-64">
+            <QuickSearch />
           </div>
-        </div>
 
-        {/* Mobile search */}
-        <div className="sm:hidden pb-3">
-          <QuickSearch />
+          {/* Add Item Button - hidden on mobile (MobileNav has prominent Add button) */}
+          <Link
+            href="/items/new"
+            className={clsx(
+              'hidden md:inline-flex items-center justify-center gap-2 flex-shrink-0',
+              'px-4 py-2 text-sm font-semibold rounded-lg',
+              'bg-gradient-to-b from-primary-500 to-primary-600 text-gray-950',
+              'hover:from-primary-400 hover:to-primary-500',
+              'shadow-sm hover:shadow-md hover:shadow-primary-500/20',
+              'transition-all duration-150',
+              'dark:from-primary-400 dark:to-primary-500'
+            )}
+            title={`Add Item (${modKey}N)`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Add Item</span>
+            {isClient && hasKeyboard && (
+              <span className="hidden lg:inline-flex">
+                <Kbd size="sm" variant="primary">N</Kbd>
+              </span>
+            )}
+          </Link>
         </div>
-
-        {/* Mobile navigation */}
-        <nav className="flex md:hidden gap-1 pb-3 overflow-x-auto scrollbar-hide">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={clsx(
-                  'px-3 py-1.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150',
-                  isActive
-                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800'
-                )}
-              >
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </header>
   );
