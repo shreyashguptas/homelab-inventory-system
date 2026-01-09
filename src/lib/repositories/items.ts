@@ -3,6 +3,20 @@ import { generateId } from '../utils/uuid';
 import type { Item, ItemWithRelations, ItemImage, ItemWithImage, TrackingMode } from '../types/database';
 import type { CreateItemRequest, ItemsQueryParams } from '../types/api';
 
+/**
+ * Format a search query for FTS5 with prefix matching.
+ * Splits the query into words and adds wildcards for prefix matching.
+ * e.g., "rot enc" becomes "rot* enc*" to match "rotary encoder"
+ */
+function formatFtsQuery(query: string): string {
+  // Split by whitespace and filter empty strings
+  const terms = query.trim().split(/\s+/).filter(t => t.length > 0);
+
+  // Add wildcard to each term for prefix matching and join with AND
+  // Escape double quotes in terms to prevent FTS5 syntax errors
+  return terms.map(term => `"${term.replace(/"/g, '""')}"*`).join(' ');
+}
+
 export interface ItemsListResult {
   items: Item[];
   total: number;
@@ -59,7 +73,7 @@ export const itemsRepository = {
 
     if (q) {
       conditions.push('i.rowid IN (SELECT rowid FROM items_fts WHERE items_fts MATCH ?)');
-      queryParams.push(q);
+      queryParams.push(formatFtsQuery(q));
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -136,7 +150,7 @@ export const itemsRepository = {
 
     if (q) {
       conditions.push('i.rowid IN (SELECT rowid FROM items_fts WHERE items_fts MATCH ?)');
-      queryParams.push(q);
+      queryParams.push(formatFtsQuery(q));
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -547,7 +561,7 @@ export const itemsRepository = {
       FROM items i
       WHERE i.rowid IN (SELECT rowid FROM items_fts WHERE items_fts MATCH ?)
       LIMIT ?
-    `).all(query, limit) as Item[];
+    `).all(formatFtsQuery(query), limit) as Item[];
   },
 
   getLowStock(): Item[] {
