@@ -9,9 +9,7 @@ import { usePlatform, getModifierKeyDisplay } from '@/hooks/useKeyboardShortcuts
 
 const navigation = [
   { name: 'Dashboard', href: '/', shortcut: '1' },
-  { name: 'Inventory', href: '/items', shortcut: '2' },
-  { name: 'Categories', href: '/categories', shortcut: '3' },
-  { name: 'Vendors', href: '/vendors', shortcut: '4' },
+  { name: 'Manage', href: '/manage', shortcut: '2' },
 ];
 
 export function Header() {

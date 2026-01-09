@@ -157,9 +157,7 @@ export const SHORTCUTS: Omit<KeyboardShortcut, 'action'>[] = [
   { key: 'k', meta: true, description: 'Search', category: 'navigation' },
   { key: 'a', meta: true, shift: true, description: 'Add New Item', category: 'navigation' },
   { key: '1', meta: true, description: 'Go to Dashboard', category: 'navigation' },
-  { key: '2', meta: true, description: 'Go to Inventory', category: 'navigation' },
-  { key: '3', meta: true, description: 'Go to Categories', category: 'navigation' },
-  { key: '4', meta: true, description: 'Go to Vendors', category: 'navigation' },
+  { key: '2', meta: true, description: 'Go to Manage', category: 'navigation' },
   // Actions
   { key: 'i', meta: true, shift: true, description: 'Import CSV', category: 'actions' },
   { key: 'Enter', meta: true, shift: true, description: 'Save item (on form)', category: 'actions' },
@@ -212,24 +210,10 @@ export function useKeyboardShortcuts({ onShowHelp, enabled = true }: UseKeyboard
       return;
     }
 
-    // Cmd/Ctrl + 2 - Inventory
+    // Cmd/Ctrl + 2 - Manage
     if (meta && event.key === '2') {
       event.preventDefault();
-      router.push('/items');
-      return;
-    }
-
-    // Cmd/Ctrl + 3 - Categories
-    if (meta && event.key === '3') {
-      event.preventDefault();
-      router.push('/categories');
-      return;
-    }
-
-    // Cmd/Ctrl + 4 - Vendors
-    if (meta && event.key === '4') {
-      event.preventDefault();
-      router.push('/vendors');
+      router.push('/manage');
       return;
     }
 

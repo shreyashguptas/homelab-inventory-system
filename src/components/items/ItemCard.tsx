@@ -74,7 +74,7 @@ export function ItemCard({ item, selectable = false, selected = false, onSelecti
         <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800 overflow-hidden">
           {primaryImage ? (
             <Image
-              src={`/api/images/${primaryImage.filename}`}
+              src={`/api/images/${primaryImage.id}`}
               alt={item.name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"

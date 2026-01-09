@@ -5,6 +5,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { Kbd } from '../keyboard/KeyboardShortcutsHelp';
 import { useKeyboardShortcutsContext } from '../keyboard/KeyboardShortcutsProvider';
 import { usePlatform, getModifierKeyDisplay } from '@/hooks/useKeyboardShortcuts';
+import { APP_VERSION } from '@/lib/config';
 
 export function Footer() {
   const { showHelp } = useKeyboardShortcutsContext();
@@ -19,7 +20,7 @@ export function Footer() {
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span className="font-mono text-xs">Lab Inventory</span>
             <span className="text-gray-300 dark:text-gray-600">·</span>
-            <span className="text-xs">v1.0</span>
+            <span className="text-xs">v{APP_VERSION}</span>
           </div>
 
           {/* Right side - actions */}
