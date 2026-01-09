@@ -30,10 +30,16 @@ export function ItemFilters({ categories, locations, currentFilters, basePath = 
     setSearchQuery(currentFilters.q || '');
   }, [currentFilters.q]);
 
-  // Keyboard shortcut: Cmd/Ctrl + K to focus search
+  // Keyboard shortcut: "/" to focus search (common pattern in GitHub, Slack, etc.)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      // Don't trigger if already in an input
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' ||
+                      target.tagName === 'TEXTAREA' ||
+                      target.isContentEditable;
+
+      if (!isInput && e.key === '/') {
         e.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
@@ -126,7 +132,7 @@ export function ItemFilters({ categories, locations, currentFilters, basePath = 
           type="text"
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search inventory... (⌘K)"
+          placeholder="Search inventory... (press /)"
           className="w-full pl-10 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:placeholder-gray-500 dark:text-gray-100"
         />
         {searchQuery && (

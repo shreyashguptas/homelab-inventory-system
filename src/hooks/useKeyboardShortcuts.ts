@@ -154,15 +154,15 @@ export function getModifierKey(): string {
 // All available shortcuts (for help modal)
 export const SHORTCUTS: Omit<KeyboardShortcut, 'action'>[] = [
   // Navigation
-  { key: 'k', meta: true, description: 'Focus search (on Dashboard)', category: 'navigation' },
-  { key: 'n', meta: true, description: 'Add New Item', category: 'navigation' },
+  { key: '/', description: 'Focus search (on Dashboard)', category: 'navigation' },
+  { key: 'k', meta: true, description: 'Add New Item', category: 'navigation' },
   { key: '1', meta: true, description: 'Go to Dashboard', category: 'navigation' },
   { key: '2', meta: true, description: 'Go to Manage', category: 'navigation' },
   // Actions
   { key: 'i', meta: true, shift: true, description: 'Import CSV', category: 'actions' },
   { key: 'Enter', meta: true, shift: true, description: 'Save item (on form)', category: 'actions' },
   // General
-  { key: '/', meta: true, description: 'Show keyboard shortcuts', category: 'general' },
+  { key: '?', description: 'Show keyboard shortcuts', category: 'general' },
   { key: 'Escape', description: 'Close modal / Go back', category: 'general' },
 ];
 
@@ -190,14 +190,8 @@ export function useKeyboardShortcuts({ onShowHelp, enabled = true }: UseKeyboard
     const meta = event.metaKey || event.ctrlKey;
     const shift = event.shiftKey;
 
-    // Cmd/Ctrl + K - Search (handled by QuickSearch component, but prevent default)
+    // Cmd/Ctrl + K - Add New Item
     if (meta && event.key === 'k') {
-      // Let QuickSearch handle this
-      return;
-    }
-
-    // Cmd/Ctrl + N - Add New Item
-    if (meta && event.key.toLowerCase() === 'n') {
       event.preventDefault();
       router.push('/items/new');
       return;
@@ -224,8 +218,8 @@ export function useKeyboardShortcuts({ onShowHelp, enabled = true }: UseKeyboard
       return;
     }
 
-    // Cmd/Ctrl + / - Show keyboard shortcuts help
-    if (meta && event.key === '/') {
+    // ? (Shift + /) - Show keyboard shortcuts help
+    if (event.key === '?') {
       event.preventDefault();
       onShowHelp?.();
       return;
