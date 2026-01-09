@@ -87,7 +87,30 @@ export async function transcribeAudio(
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Transcription error:', errorText);
-    throw new Error(`Transcription failed: ${response.status} ${response.statusText}`);
+
+    // Try to parse the Groq error response for a human-readable message
+    let errorMessage = `Transcription failed (HTTP ${response.status})`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (errorJson.error?.message) {
+        errorMessage = errorJson.error.message;
+      }
+    } catch {
+      // JSON parsing failed, use status-based fallback messages
+    }
+
+    // Map common HTTP status codes to user-friendly messages
+    if (response.status === 401) {
+      errorMessage = 'Invalid Groq API key. Please check your GROQ_API_KEY environment variable.';
+    } else if (response.status === 429) {
+      errorMessage = 'Groq API rate limit exceeded. Please wait a moment and try again.';
+    } else if (response.status === 400) {
+      errorMessage = errorMessage || 'Invalid audio format or request. Please try recording again.';
+    } else if (response.status === 503) {
+      errorMessage = 'Groq API is temporarily unavailable. Please try again later.';
+    }
+
+    throw new Error(errorMessage);
   }
 
   const result = await response.json();
@@ -144,7 +167,28 @@ Please extract the item information from the transcription and return a JSON obj
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Extraction error:', errorText);
-    throw new Error(`Extraction failed: ${response.status} ${response.statusText}`);
+
+    // Try to parse the Groq error response for a human-readable message
+    let errorMessage = `Data extraction failed (HTTP ${response.status})`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (errorJson.error?.message) {
+        errorMessage = errorJson.error.message;
+      }
+    } catch {
+      // JSON parsing failed, use status-based fallback messages
+    }
+
+    // Map common HTTP status codes to user-friendly messages
+    if (response.status === 401) {
+      errorMessage = 'Invalid Groq API key. Please check your GROQ_API_KEY environment variable.';
+    } else if (response.status === 429) {
+      errorMessage = 'Groq API rate limit exceeded. Please wait a moment and try again.';
+    } else if (response.status === 503) {
+      errorMessage = 'Groq API is temporarily unavailable. Please try again later.';
+    }
+
+    throw new Error(errorMessage);
   }
 
   const result = await response.json();

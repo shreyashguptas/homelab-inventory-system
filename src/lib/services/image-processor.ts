@@ -21,7 +21,7 @@ export interface ProcessedImage {
 
 export async function processImage(
   inputBuffer: Buffer,
-  originalFilename: string
+  _originalFilename: string
 ): Promise<ProcessedImage> {
   const id = uuidv4();
   const ext = '.webp';

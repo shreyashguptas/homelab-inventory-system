@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Button } from '@/components/ui';
 import type { ItemImage } from '@/lib/types/database';
 
 interface ImageUploaderProps {

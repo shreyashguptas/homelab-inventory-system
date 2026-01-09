@@ -81,7 +81,7 @@ export function VoiceAssistModal({
     setProcessingSteps(steps);
 
     let transcribedText = '';
-    let imageBase64: string[] = [];
+    const imageBase64: string[] = [];
 
     try {
       // Step 1: Transcribe audio
@@ -171,7 +171,21 @@ export function VoiceAssistModal({
 
     } catch (err) {
       console.error('Voice assist error:', err);
-      setError(err instanceof Error ? err.message : 'Processing failed');
+
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+
+      if (err instanceof Error) {
+        // Handle common fetch errors with user-friendly messages
+        if (err.message === 'Failed to fetch') {
+          errorMessage = 'Could not connect to the server. Please check your network connection and try again.';
+        } else if (err.message.includes('NetworkError')) {
+          errorMessage = 'Network error occurred. Please check your internet connection.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(errorMessage);
       setStep('error');
     }
   }, [images, categories, vendors]);
@@ -411,7 +425,32 @@ export function VoiceAssistModal({
           </div>
         );
 
-      case 'error':
+      case 'error': {
+        // Determine troubleshooting tips based on error message
+        const getTroubleshootingTip = () => {
+          if (!error) return null;
+          const lowerError = error.toLowerCase();
+
+          if (lowerError.includes('api key') || lowerError.includes('401') || lowerError.includes('unauthorized')) {
+            return 'Check that GROQ_API_KEY is correctly set in your environment variables.';
+          }
+          if (lowerError.includes('rate limit') || lowerError.includes('429')) {
+            return 'You\'ve made too many requests. Wait a minute before trying again.';
+          }
+          if (lowerError.includes('network') || lowerError.includes('connect') || lowerError.includes('fetch')) {
+            return 'Check your internet connection and ensure the server is running.';
+          }
+          if (lowerError.includes('unavailable') || lowerError.includes('503')) {
+            return 'The AI service is temporarily down. Please try again in a few minutes.';
+          }
+          if (lowerError.includes('no speech')) {
+            return 'Make sure to speak clearly into the microphone and check your microphone settings.';
+          }
+          return null;
+        };
+
+        const troubleshootingTip = getTroubleshootingTip();
+
         return (
           <div className="space-y-3 sm:space-y-4">
             {renderProcessingSteps()}
@@ -419,6 +458,13 @@ export function VoiceAssistModal({
             <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
               <h4 className="font-medium text-sm sm:text-base text-red-800 dark:text-red-300 mb-1">Processing Failed</h4>
               <p className="text-xs sm:text-sm text-red-700 dark:text-red-400 break-words">{error}</p>
+              {troubleshootingTip && (
+                <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-700">
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    <span className="font-medium">Tip:</span> {troubleshootingTip}
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
               <Button type="button" variant="ghost" onClick={handleStartOver} className="order-2 sm:order-1">
@@ -430,6 +476,7 @@ export function VoiceAssistModal({
             </div>
           </div>
         );
+      }
     }
   };
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { itemsRepository } from '@/lib/repositories/items';
 import { categoriesRepository } from '@/lib/repositories/categories';
 import { vendorsRepository } from '@/lib/repositories/vendors';
-import { parseCSV, type ParsedCSVRow } from '@/lib/services/csv';
+import { parseCSV } from '@/lib/services/csv';
 
 // POST /api/import - Import items from CSV
 export async function POST(request: NextRequest) {

@@ -61,7 +61,7 @@ export interface PaginatedResponse<T> {
   };
 }
 
-export interface ItemsListResponse extends PaginatedResponse<Item> {}
+export type ItemsListResponse = PaginatedResponse<Item>;
 
 export interface ItemDetailResponse extends Item {
   category: Category | null;

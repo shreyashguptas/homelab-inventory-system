@@ -26,7 +26,8 @@ export function SpecificationsEditor({ value, onChange }: SpecificationsEditorPr
   };
 
   const handleRemove = (key: string) => {
-    const { [key]: _, ...rest } = value;
+    const { [key]: _removed, ...rest } = value;
+    void _removed; // Intentionally unused - destructured to exclude from rest
     onChange(rest);
   };
 

@@ -1,7 +1,7 @@
 import { getDb } from '../db';
 import { generateId } from '../utils/uuid';
 import type { Item, ItemWithRelations, ItemImage, TrackingMode } from '../types/database';
-import type { CreateItemRequest, UpdateItemRequest, ItemsQueryParams } from '../types/api';
+import type { CreateItemRequest, ItemsQueryParams } from '../types/api';
 
 export interface ItemsListResult {
   items: Item[];

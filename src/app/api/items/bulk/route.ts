@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           } else {
             errors.push({ id, error: 'Item not found' });
           }
-        } catch (err) {
+        } catch (_err) {
           errors.push({ id, error: 'Failed to delete' });
         }
       }
