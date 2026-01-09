@@ -355,6 +355,33 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Images - for existing items */}
+          {item && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Images
+              </label>
+              <ImageUploader itemId={item.id} existingImages={item.images} />
+            </div>
+          )}
+
+          {/* Pending Images - for new items (from voice assist) */}
+          {!item && pendingImages.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Images ({pendingImages.length}/3)
+              </label>
+              <TempImageUploader
+                images={pendingImages}
+                onImagesChange={setPendingImages}
+                maxImages={3}
+              />
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                These images will be uploaded when you create the item.
+              </p>
+            </div>
+          )}
+
           <Input
             name="name"
             label="Name"
@@ -671,37 +698,6 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
           />
         </CardContent>
       </Card>
-
-      {/* Images for existing items */}
-      {item && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Images</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ImageUploader itemId={item.id} existingImages={item.images} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Pending Images for new items (from voice assist) */}
-      {!item && pendingImages.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Images ({pendingImages.length}/3)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TempImageUploader
-              images={pendingImages}
-              onImagesChange={setPendingImages}
-              maxImages={3}
-            />
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              These images will be uploaded when you create the item.
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Submit */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">

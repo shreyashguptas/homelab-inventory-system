@@ -88,17 +88,14 @@ export function Header() {
               'transition-all duration-150',
               'dark:from-primary-400 dark:to-primary-500'
             )}
-            title={`Add Item (${modKey}⇧A)`}
+            title={`Add Item (${modKey}N)`}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
             <span>Add Item</span>
             {isClient && hasKeyboard && (
-              <span className="hidden lg:inline-flex gap-0.5">
-                <Kbd size="sm" variant="primary">⇧</Kbd>
-                <Kbd size="sm" variant="primary">A</Kbd>
-              </span>
+              <Kbd size="sm" variant="primary" className="hidden lg:inline-flex">N</Kbd>
             )}
           </Link>
         </div>
