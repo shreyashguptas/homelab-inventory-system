@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-import { QuickSearch } from '../search/QuickSearch';
 import { Kbd } from '../keyboard/KeyboardShortcutsHelp';
 import { usePlatform, getModifierKeyDisplay } from '@/hooks/useKeyboardShortcuts';
 
@@ -74,13 +73,8 @@ export function Header() {
             })}
           </nav>
 
-          {/* Spacer - only on desktop */}
-          <div className="hidden md:block flex-1" />
-
-          {/* Search - takes remaining space on mobile, fixed width on desktop */}
-          <div className="flex-1 min-w-0 md:flex-none md:w-48 lg:w-64">
-            <QuickSearch />
-          </div>
+          {/* Spacer */}
+          <div className="flex-1" />
 
           {/* Add Item Button - hidden on mobile (MobileNav has prominent Add button) */}
           <Link

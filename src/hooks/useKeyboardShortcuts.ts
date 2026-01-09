@@ -154,7 +154,7 @@ export function getModifierKey(): string {
 // All available shortcuts (for help modal)
 export const SHORTCUTS: Omit<KeyboardShortcut, 'action'>[] = [
   // Navigation
-  { key: 'k', meta: true, description: 'Search', category: 'navigation' },
+  { key: 'k', meta: true, description: 'Focus search (on Dashboard)', category: 'navigation' },
   { key: 'a', meta: true, shift: true, description: 'Add New Item', category: 'navigation' },
   { key: '1', meta: true, description: 'Go to Dashboard', category: 'navigation' },
   { key: '2', meta: true, description: 'Go to Manage', category: 'navigation' },

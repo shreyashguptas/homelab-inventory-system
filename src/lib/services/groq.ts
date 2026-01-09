@@ -27,7 +27,7 @@ GENERAL EXTRACTION RULES:
 6. Generate relevant tags as lowercase strings (e.g., ["raspberry-pi", "sbc", "arm", "amazon"])
 7. For condition: use "new" if explicitly stated as new/unopened, "working" as default for used items
 8. If quantity is mentioned (like "I have 5 of these"), extract it. Default to 1 if not mentioned.
-9. Extract purchase_price if a price/cost is mentioned or visible (just the number, determine currency from context)
+9. Extract purchase_price as the PRICE PER UNIT (not total). If user says "I paid $50 for 5 units", the per-unit price is $10. If only total price is given, divide by quantity.
 10. For dates, use ISO format YYYY-MM-DD if mentioned
 11. ALWAYS try to extract: name, quantity, purchase_price, and purchase_url - these are important fields
 
@@ -50,7 +50,7 @@ The form has these fields:
 - vendor_name_suggestion: Suggested vendor/store name
 - specifications: Object of technical specs {"key": "value"}
 - tags: Array of relevant tags - IMPORTANT: always generate relevant tags
-- purchase_price: Cost as a number - IMPORTANT: always try to extract this
+- purchase_price: Cost PER UNIT as a number (divide total by quantity if needed) - IMPORTANT: always try to extract this
 - purchase_currency: "USD", "EUR", "GBP", "INR", "CAD", "AUD"
 - purchase_url: Where to buy - IMPORTANT: extract if visible in screenshots
 - datasheet_url: Link to documentation
