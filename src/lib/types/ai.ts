@@ -59,4 +59,15 @@ export interface ExtractionRequest {
 export interface AIContext {
   categories: { id: string; name: string }[];
   vendors: { id: string; name: string }[];
+  existingTags?: string[];
+}
+
+// Required fields for extraction validation
+export const REQUIRED_EXTRACTION_FIELDS = ['name', 'quantity', 'purchase_price', 'purchase_url'] as const;
+export type RequiredExtractionField = typeof REQUIRED_EXTRACTION_FIELDS[number];
+
+export interface ExtractionValidation {
+  missingRequired: string[];
+  missingLabels: string[];
+  isComplete: boolean;
 }

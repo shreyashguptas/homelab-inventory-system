@@ -43,6 +43,10 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
   const [minQuantity, setMinQuantity] = useState(item?.min_quantity?.toString() || '0');
   const [purchasePrice, setPurchasePrice] = useState(item?.purchase_price?.toString() || '');
 
+  // Price entry mode: 'per_unit' or 'total' (only relevant for quantity tracking mode)
+  const [priceMode, setPriceMode] = useState<'per_unit' | 'total'>('per_unit');
+  const [totalPrice, setTotalPrice] = useState('');
+
   // Voice assist state
   const [showVoiceAssist, setShowVoiceAssist] = useState(false);
   const [pendingImages, setPendingImages] = useState<TempImage[]>([]);
@@ -68,6 +72,38 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
     }
 
     setter(sanitized);
+  };
+
+  // Calculate per-unit price from total price and quantity
+  const calculatePerUnitPrice = (total: string, qty: string): string => {
+    const totalNum = parseFloat(total);
+    const qtyNum = parseFloat(qty);
+    if (!isNaN(totalNum) && !isNaN(qtyNum) && qtyNum > 0) {
+      return (totalNum / qtyNum).toFixed(2);
+    }
+    return '';
+  };
+
+  // Calculate total price from per-unit price and quantity
+  const calculateTotalPrice = (perUnit: string, qty: string): string => {
+    const perUnitNum = parseFloat(perUnit);
+    const qtyNum = parseFloat(qty);
+    if (!isNaN(perUnitNum) && !isNaN(qtyNum) && qtyNum > 0) {
+      return (perUnitNum * qtyNum).toFixed(2);
+    }
+    return '';
+  };
+
+  // Get the effective per-unit price for form submission
+  const getEffectivePerUnitPrice = (): string => {
+    if (trackingMode === 'individual') {
+      return purchasePrice;
+    }
+    if (priceMode === 'per_unit') {
+      return purchasePrice;
+    }
+    // Calculate from total
+    return calculatePerUnitPrice(totalPrice, quantity);
   };
 
   // Create new category
@@ -219,7 +255,7 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
       condition: trackingMode === 'individual' ? (formData.get('condition') as ItemCondition) || 'working' : undefined,
       purchase_date: trackingMode === 'individual' ? (formData.get('purchase_date') as string) || undefined : undefined,
       warranty_expiry: trackingMode === 'individual' ? (formData.get('warranty_expiry') as string) || undefined : undefined,
-      purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
+      purchase_price: getEffectivePerUnitPrice() ? parseFloat(getEffectivePerUnitPrice()) : undefined,
       purchase_currency: (formData.get('purchase_currency') as string) || 'USD',
     };
 
@@ -412,42 +448,141 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
           </div>
 
           {trackingMode === 'quantity' ? (
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Quantity
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={quantity}
-                  onChange={(e) => handleNumericInput(e.target.value, setQuantity)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
-                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
-                             focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+            <div className="space-y-4">
+              {/* Quantity fields */}
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Quantity
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={quantity}
+                    onChange={(e) => handleNumericInput(e.target.value, setQuantity)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                               focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Low Stock Alert
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={minQuantity}
+                    onChange={(e) => handleNumericInput(e.target.value, setMinQuantity)}
+                    placeholder="0 = no alert"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                               focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                  />
+                </div>
+                <Select
+                  name="unit"
+                  label="Unit"
+                  defaultValue={item?.unit || 'pcs'}
+                  options={UNITS.map((u) => ({ value: u.value, label: u.label }))}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Low Stock Alert
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={minQuantity}
-                  onChange={(e) => handleNumericInput(e.target.value, setMinQuantity)}
-                  placeholder="0 = no alert"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
-                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
-                             focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
-                />
+
+              {/* Purchase Price Section for Quantity Mode */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Purchase Price:
+                  </span>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="price_mode"
+                        checked={priceMode === 'per_unit'}
+                        onChange={() => setPriceMode('per_unit')}
+                        className="text-primary-600"
+                      />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Per unit</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="price_mode"
+                        checked={priceMode === 'total'}
+                        onChange={() => setPriceMode('total')}
+                        className="text-primary-600"
+                      />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Total price</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {priceMode === 'per_unit' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Price per Unit
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={purchasePrice}
+                          onChange={(e) => handleNumericInput(e.target.value, setPurchasePrice)}
+                          placeholder="0.00"
+                          className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                                     placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                                     focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                        />
+                      </div>
+                      {purchasePrice && parseFloat(quantity) > 0 && (
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          Total: ${calculateTotalPrice(purchasePrice, quantity)} for {quantity} units
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Total Price
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={totalPrice}
+                          onChange={(e) => handleNumericInput(e.target.value, setTotalPrice)}
+                          placeholder="0.00"
+                          className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                                     placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                                     focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                        />
+                      </div>
+                      {totalPrice && parseFloat(quantity) > 0 && (
+                        <p className="mt-1 text-xs text-green-600 dark:text-green-400 font-medium">
+                          = ${calculatePerUnitPrice(totalPrice, quantity)} per unit
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <Select
+                    name="purchase_currency"
+                    label="Currency"
+                    defaultValue={item?.purchase_currency || 'USD'}
+                    options={[
+                      { value: 'USD', label: 'USD' },
+                      { value: 'EUR', label: 'EUR' },
+                      { value: 'GBP', label: 'GBP' },
+                      { value: 'INR', label: 'INR' },
+                      { value: 'CAD', label: 'CAD' },
+                      { value: 'AUD', label: 'AUD' },
+                    ]}
+                  />
+                </div>
               </div>
-              <Select
-                name="unit"
-                label="Unit"
-                defaultValue={item?.unit || 'pcs'}
-                options={UNITS.map((u) => ({ value: u.value, label: u.label }))}
-              />
             </div>
           ) : (
             <div className="space-y-4">
@@ -514,45 +649,48 @@ export function ItemForm({ item, categories: initialCategories, vendors: initial
         </CardContent>
       </Card>
 
-      {/* Purchase Information */}
+      {/* Purchase Information - For individual mode, shows price/currency. For both modes, shows URLs */}
       <Card>
         <CardHeader>
-          <CardTitle>Purchase Information</CardTitle>
+          <CardTitle>{trackingMode === 'individual' ? 'Purchase Information' : 'Links'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Purchase Price
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={purchasePrice}
-                  onChange={(e) => handleNumericInput(e.target.value, setPurchasePrice)}
-                  placeholder="0.00"
-                  className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
-                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
-                             focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
-                />
+          {/* Price and currency only for individual mode (quantity mode has these in Tracking Mode section) */}
+          {trackingMode === 'individual' && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Purchase Price
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={purchasePrice}
+                    onChange={(e) => handleNumericInput(e.target.value, setPurchasePrice)}
+                    placeholder="0.00"
+                    className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900
+                               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500
+                               focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                  />
+                </div>
               </div>
+              <Select
+                name="purchase_currency"
+                label="Currency"
+                defaultValue={item?.purchase_currency || 'USD'}
+                options={[
+                  { value: 'USD', label: 'USD' },
+                  { value: 'EUR', label: 'EUR' },
+                  { value: 'GBP', label: 'GBP' },
+                  { value: 'INR', label: 'INR' },
+                  { value: 'CAD', label: 'CAD' },
+                  { value: 'AUD', label: 'AUD' },
+                ]}
+              />
             </div>
-            <Select
-              name="purchase_currency"
-              label="Currency"
-              defaultValue={item?.purchase_currency || 'USD'}
-              options={[
-                { value: 'USD', label: 'USD' },
-                { value: 'EUR', label: 'EUR' },
-                { value: 'GBP', label: 'GBP' },
-                { value: 'INR', label: 'INR' },
-                { value: 'CAD', label: 'CAD' },
-                { value: 'AUD', label: 'AUD' },
-              ]}
-            />
-          </div>
+          )}
 
           <Input
             name="purchase_url"

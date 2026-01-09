@@ -13,6 +13,7 @@ const ExtractionRequestSchema = z.object({
     id: z.string(),
     name: z.string(),
   })).default([]),
+  existingTags: z.array(z.string()).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -36,10 +37,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { text, images, categories, vendors } = validation.data;
+    const { text, images, categories, vendors, existingTags } = validation.data;
 
     // Extract form data using AI
-    const formData = await extractFormData(text, images, { categories, vendors });
+    const formData = await extractFormData(text, images, { categories, vendors, existingTags });
 
     return NextResponse.json(formData);
   } catch (error) {
